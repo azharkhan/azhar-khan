@@ -1,0 +1,57 @@
+.container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.name {
+  font-size: 4rem;
+  font-style: normal;
+  font-family: 'Raleway', sans-serif;
+  font-weight: 900;
+  color: #CF1259;
+  text-transform: uppercase;
+  margin-bottom: 0;
+}
+
+.description {
+  font-size: 2rem;
+  font-family: 'Montserrat', sans-serif;
+  color: #FEF9FF;
+  margin-top: 1rem;
+}
+
+.linksContainer {
+  margin-top: 2rem;
+  padding: 0;
+}
+
+.link {
+  font-family: 'Montserrat', 'Helvetica Neue', sans-serif;
+  font-size: 1.5rem;
+  text-transform: uppercase;
+  text-decoration: none;
+  color: #E1CA96;
+  padding: 0 2rem;
+}
+
+.link:hover {
+  cursor: pointer;
+  text-decoration: underline;
+  text-decoration-color: #3E92CC;
+}
+
+@media only screen and (max-width: 480px) {
+
+  .name {
+    font-size: 2.25rem;
+  }
+
+  .description {
+    font-size: 1.125rem;
+  }
+
+  .link {
+    font-size: 1.125rem;
+  }
+}
