@@ -1,0 +1,9 @@
+---
+interface Props {
+  toy?: "cube-timer" | "model-viewer";
+}
+
+const { toy } = Astro.props;
+---
+
+{toy && null}

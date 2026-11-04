@@ -1,0 +1,38 @@
+---
+import Card from "../../components/Card.astro";
+import Page from "../../layouts/Page.astro";
+import { getGarden } from "../../lib/garden";
+import { entriesFor, statMetric } from "../../lib/garden/query";
+import { GARDEN, entryPath, entryPaths, pursuitPath } from "../../lib/garden/routes";
+import { GARDEN_EMPTY, GARDEN_INTRO } from "../../lib/garden/copy";
+
+const garden = await getGarden();
+const paths = entryPaths(garden);
+const counts = new Map(garden.pursuits.map((pursuit) => [pursuit.id, entriesFor(garden, pursuit.id).length]));
+---
+
+<Page title="Garden" current="page" wide>
+  <h1 class="page-title">Garden</h1>
+  <p class="page-intro">{GARDEN_INTRO}</p>
+  <nav class="filters" aria-label="Pursuits">
+    <a href={GARDEN} aria-current="page">All <span class="count">{garden.entries.length}</span></a>
+    {garden.pursuits.map((pursuit) => (
+      <a href={pursuitPath(pursuit.id)}>{pursuit.title} <span class="count">{counts.get(pursuit.id) ?? 0}</span></a>
+    ))}
+  </nav>
+  {garden.entries.length > 0 ? (
+    <ol class="wall">
+      {garden.entries.map((entry) => {
+        const primary = entry.pursuits[0]!;
+        const pursuit = garden.pursuits.find((candidate) => candidate.id === primary);
+        if (!pursuit) throw new Error(`unknown primary pursuit ${primary} for ${entry.id}`);
+        const metric = entry.metric ?? statMetric(garden, entry, primary);
+        return (
+          <li data-touched={entry.lastTouched.toISOString()} data-growth={entry.growth}>
+            <Card entry={entry} path={entryPath(paths, entry.id)} metric={metric} pursuitLabel={pursuit.title} />
+          </li>
+        );
+      })}
+    </ol>
+  ) : <p class="empty">{GARDEN_EMPTY}</p>}
+</Page>

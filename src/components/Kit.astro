@@ -1,0 +1,23 @@
+---
+import type { Pursuit } from "../lib/garden/schema";
+
+interface Props {
+  items: Pursuit["kit"];
+}
+
+const { items } = Astro.props;
+---
+
+{items.length > 0 && (
+  <section class="kit" aria-labelledby="kit-title">
+    <h2 class="section-title" id="kit-title">Kit</h2>
+    <ul>
+      {items.map((item) => (
+        <li>
+          {item.href ? <a href={item.href}>{item.name}</a> : item.name}
+          {item.why && <span class="kit-why"> — {item.why}</span>}
+        </li>
+      ))}
+    </ul>
+  </section>
+)}

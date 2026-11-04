@@ -1,0 +1,30 @@
+[
+  {
+    "id": "tools",
+    "title": "Tools",
+    "items": [
+      { "name": "[placeholder: tool]", "why": "[placeholder: why]" }
+    ]
+  },
+  {
+    "id": "desk",
+    "title": "Desk",
+    "items": [
+      { "name": "[placeholder: desk item]", "why": "[placeholder: why]" }
+    ]
+  },
+  {
+    "id": "devices",
+    "title": "Devices",
+    "items": [
+      { "name": "X4 + CrossPoint", "why": "[placeholder: why]" }
+    ]
+  },
+  {
+    "id": "likes",
+    "title": "Likes",
+    "items": [
+      { "name": "[placeholder: favourite podcast]", "why": "[placeholder: why]" }
+    ]
+  }
+]

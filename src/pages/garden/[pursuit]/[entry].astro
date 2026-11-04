@@ -1,0 +1,84 @@
+---
+import { Image } from "astro:assets";
+import { getEntry, render } from "astro:content";
+import type { ImageMetadata } from "astro";
+import Connected from "../../../components/Connected.astro";
+import History from "../../../components/History.astro";
+import Print from "../../../components/Print.astro";
+import Page from "../../../layouts/Page.astro";
+import { longDate } from "../../../lib/dates";
+import { getGarden } from "../../../lib/garden";
+import { entryPaths, GARDEN, pursuitPath } from "../../../lib/garden/routes";
+import { metricView } from "../../../lib/home/ledger";
+import { readMinutes } from "../../../lib/garden/wall";
+import { statMetric } from "../../../lib/garden/query";
+import "../../../styles/prose.css";
+
+export async function getStaticPaths() {
+  const garden = await getGarden();
+  const paths = entryPaths(garden);
+  return garden.entries.map((entry) => {
+    const route = paths.get(entry.id)!;
+    return { params: { pursuit: route.pursuit, entry: route.slug }, props: { id: entry.id } };
+  });
+}
+
+const { id } = Astro.props;
+const garden = await getGarden();
+const entry = garden.entries.find((candidate) => candidate.id === id);
+if (!entry) throw new Error(`unknown garden entry: ${id}`);
+const primary = garden.pursuits.find((pursuit) => pursuit.id === entry.pursuits[0]);
+if (!primary) throw new Error(`unknown primary pursuit for ${entry.id}`);
+const paths = entryPaths(garden);
+const connected = entry.connected.map((connectedId) => garden.entries.find((candidate) => candidate.id === connectedId)).filter((candidate) => candidate !== undefined);
+const pursuits = entry.pursuits.map((pursuitId) => garden.pursuits.find((pursuit) => pursuit.id === pursuitId)).filter((pursuit) => pursuit !== undefined);
+const contentEntry = entry.sources.includes("hand") ? await getEntry("entries", entry.id) : undefined;
+if (entry.sources.includes("hand") && !contentEntry) throw new Error(`missing hand entry: ${entry.id}`);
+const rendered = contentEntry && entry.body ? await render(contentEntry) : undefined;
+const Content = rendered?.Content;
+const metric = entry.metric ?? statMetric(garden, entry, primary.id);
+const view = metric ? metricView(metric) : undefined;
+const linkHref = entry.url ?? (entry.kind === "link" ? entry.href : undefined);
+const linkLabel = linkHref ? new URL(linkHref).hostname.replace(/^www\./, "") : undefined;
+const updated = longDate(entry.date) !== longDate(entry.lastTouched);
+const thoughtParagraphs = entry.thought?.split(/\n\s*\n/).filter(Boolean) ?? [];
+---
+
+<Page title={entry.title} current="true">
+  <article class:list={["page-prose", entry.long && "longform"]}>
+    <header class="post-head">
+      <h1 class="page-title">{entry.title}</h1>
+      {entry.dek && <p class="dek">{entry.dek}</p>}
+      <p class="meta">
+        <time datetime={entry.date.toISOString()}>{longDate(entry.date)}</time> · {entry.growth}
+        {entry.long && <> · {readMinutes(entry.body ?? "")} min read</>}
+        {updated && <> · Updated {longDate(entry.lastTouched)}</>}
+      </p>
+    </header>
+
+    {entry.photo && <Print photo={entry.photo} />}
+    {entry.cover && (
+      typeof entry.cover === "string" ? (
+        <img class="entry-cover" src={entry.cover} alt="" loading="lazy" decoding="async" referrerpolicy="no-referrer" style={`aspect-ratio: ${entry.pursuits.includes("films") ? "2 / 3" : "1 / 1"}`} />
+      ) : (
+        <Image class="entry-cover" src={entry.cover as ImageMetadata} alt="" format="webp" widths={[640, 1280]} sizes="(min-width: 40rem) 35rem, 100vw" />
+      )
+    )}
+    {view && (
+      <p class="entry-metric">
+        {view.kind === "stars" ? <span class="stars" role="img" aria-label={view.label}>{view.text}</span> : view.text}
+        {view.kind === "stat" && view.change && <span class="entry-change">{view.change}</span>}
+      </p>
+    )}
+    {entry.kind === "link" && linkHref && <p class="entry-link"><a href={linkHref} referrerpolicy="no-referrer">{linkLabel}</a></p>}
+    {Content && <div class="prose"><Content /></div>}
+    {!Content && thoughtParagraphs.length > 0 && <div class="prose">{thoughtParagraphs.map((paragraph) => <p>{paragraph}</p>)}</div>}
+
+    <History events={entry.history} thought={entry.thought} />
+    <Connected entry={entry} connected={connected} pursuits={pursuits} paths={paths} />
+    <nav class="post-nav" aria-label="Entry">
+      <a href={pursuitPath(primary.id)}>← {primary.title}</a>
+      <a href={GARDEN}>Garden</a>
+    </nav>
+  </article>
+</Page>

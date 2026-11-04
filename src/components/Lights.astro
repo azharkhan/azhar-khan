@@ -1,0 +1,51 @@
+---
+import Moon from "../icons/moon.svg";
+import Sun from "../icons/sun.svg";
+---
+
+<button class="lights" type="button" data-lights>
+  <span class="lights-down"><Moon class="ico" aria-hidden="true" />Lights down</span>
+  <span class="lights-up"><Sun class="ico" aria-hidden="true" />Lights up</span>
+</button>
+
+<script>
+  import { smoke } from "../lib/smoke";
+  import { STORAGE_KEY, lightsTitle, nextOverride, parseOverride, type Override, type Theme } from "../lib/theme";
+
+  const root = document.documentElement;
+  const systemDark = matchMedia("(prefers-color-scheme: dark)");
+  const reduceMotion = matchMedia("(prefers-reduced-motion: reduce)");
+  const system = (): Theme => (systemDark.matches ? "dark" : "light");
+  const override = (): Override => parseOverride(root.dataset.theme);
+
+  function sync() {
+    const title = lightsTitle(override(), system());
+    document.querySelectorAll<HTMLElement>("[data-lights]").forEach((el) => {
+      el.title = title;
+    });
+  }
+
+  function apply(next: Override) {
+    root.classList.add("theming");
+    if (next) root.dataset.theme = next;
+    else delete root.dataset.theme;
+    try {
+      if (next) localStorage.setItem(STORAGE_KEY, next);
+      else localStorage.removeItem(STORAGE_KEY);
+    } catch {}
+    sync();
+    setTimeout(() => root.classList.remove("theming"), 800);
+  }
+
+  function flip(event: Event) {
+    const next = nextOverride(override(), system());
+    if (reduceMotion.matches) return apply(next);
+    const box = (event.currentTarget as HTMLElement).getBoundingClientRect();
+    const rgb = getComputedStyle(root).getPropertyValue("--smoke").trim();
+    smoke(box.left + box.width / 2, box.top + box.height / 2, rgb, () => apply(next));
+  }
+
+  document.querySelectorAll("[data-lights]").forEach((el) => el.addEventListener("click", flip));
+  systemDark.addEventListener("change", sync);
+  sync();
+</script>

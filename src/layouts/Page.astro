@@ -1,0 +1,26 @@
+---
+import Footer from "../components/Footer.astro";
+import Nav from "../components/Nav.astro";
+import Base from "./Base.astro";
+import "../styles/garden.css";
+
+interface Props {
+  title?: string;
+  current?: "page" | "true";
+  currentRoom?: "garden" | "uses";
+  wide?: boolean;
+}
+
+const { title, current, currentRoom, wide = false } = Astro.props;
+---
+
+<Base title={title}>
+  <div class:list={["site", wide && "wide"]}>
+    <header class="site-head">
+      <a class="site-name" href="/">Azhar Khan</a>
+      <Nav current={current} currentRoom={currentRoom} />
+    </header>
+    <main class="page"><slot /></main>
+    <Footer />
+  </div>
+</Base>

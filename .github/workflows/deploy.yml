@@ -1,0 +1,49 @@
+name: Deploy
+
+on:
+  push:
+    branches:
+      - master
+  schedule:
+    - cron: "0 10 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: deploy-workers
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: "22.23.4"
+          cache: npm
+
+      - run: npm ci
+
+      - run: npm run check
+
+      - name: Build production site
+        run: npm run build
+        env:
+          BGG_TOKEN: ${{ secrets.BGG_TOKEN }}
+          RA_USER: ${{ secrets.RA_USER }}
+          RA_KEY: ${{ secrets.RA_KEY }}
+          LASTFM_USER: ${{ secrets.LASTFM_USER }}
+          LASTFM_API_KEY: ${{ secrets.LASTFM_API_KEY }}
+          CROSSPOINT_USER: ${{ secrets.CROSSPOINT_USER }}
+          CROSSPOINT_KEY: ${{ secrets.CROSSPOINT_KEY }}
+          CROSSPOINT_URL: ${{ secrets.CROSSPOINT_URL }}
+
+      - name: Deploy static assets to Cloudflare Workers
+        run: npx wrangler deploy
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}

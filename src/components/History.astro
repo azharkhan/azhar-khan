@@ -1,0 +1,29 @@
+---
+import { shortDate } from "../lib/dates";
+import type { HistoryEvent } from "../lib/garden/schema";
+
+interface Props {
+  events: HistoryEvent[];
+  thought?: string;
+}
+
+const { events, thought } = Astro.props;
+const items = [...events].sort((a, b) => b.at.getTime() - a.at.getTime() || a.verb.localeCompare(b.verb));
+---
+
+{items.length > 0 && (
+  <section class="entry-history" aria-labelledby="history-title">
+    <h2 class="section-title" id="history-title">History</h2>
+    <ul class="toc">
+      {items.map((event) => (
+        <li>
+          {event.href ? <a href={event.href} referrerpolicy="no-referrer">{event.verb}</a> : <span>{event.verb}</span>}
+          {event.value !== undefined && <span>{event.value}{event.unit ? ` ${event.unit}` : ""}</span>}
+          <span class="leader" aria-hidden="true"></span>
+          <time datetime={event.at.toISOString()}>{shortDate(event.at)}</time>
+          {event.text && event.text !== thought && <p class="history-text">{event.text}</p>}
+        </li>
+      ))}
+    </ul>
+  </section>
+)}

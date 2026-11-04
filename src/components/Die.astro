@@ -1,0 +1,106 @@
+---
+import { FILTER_IDS, FILTER_LABELS, type Game } from "../lib/home/toys";
+import type { ShelfGame } from "../lib/garden/schema";
+
+const { shelf } = Astro.props as { shelf: ShelfGame[] };
+const games: Game[] = shelf.map(({ name, minPlayers, maxPlayers, minutes, plays }) => ({ name, minPlayers, maxPlayers, minutes, plays }));
+const filterIds = FILTER_IDS.filter((id) => id === "any" || games.some((game) => id === "two" ? game.minPlayers <= 2 && game.maxPlayers >= 2 : game.minutes <= 45));
+---
+
+{games.length > 0 && (
+  <div class="card needs-js" data-die data-shelf={JSON.stringify(games)}>
+    <p class="card-title">Can’t decide what to play?</p>
+    <div class="filters" role="group" aria-label="Filter games">
+      {filterIds.map((id) => <button type="button" data-filter={id} aria-pressed={id === "any" ? "true" : "false"}>{FILTER_LABELS[id]}</button>)}
+    </div>
+    <div class="card-body">
+      <button type="button" class="roll" aria-label="Roll the die for a game to play">
+        <svg viewBox="0 0 40 40" aria-hidden="true"><rect x="3" y="3" width="34" height="34" rx="8" fill="none" stroke="currentColor" stroke-width="2.6"/><g class="pips" fill="var(--coral)"><circle cx="12" cy="12" r="3.4"/><circle cx="28" cy="12" r="3.4"/><circle cx="20" cy="20" r="3.4"/><circle cx="12" cy="28" r="3.4"/><circle cx="28" cy="28" r="3.4"/></g></svg>Roll
+      </button>
+      <p class="out" aria-live="polite">One of my games, picked for you.</p>
+    </div>
+  </div>
+)}
+
+<script>
+  import { FILTERS, gameLine, pickGame, rollFace, type FilterId } from "../lib/home/toys";
+  import type { Game } from "../lib/home/toys";
+
+  const PIPS: Record<1 | 2 | 3 | 4 | 5 | 6, readonly (readonly [number, number])[]> = {
+    1: [[20, 20]],
+    2: [[12, 12], [28, 28]],
+    3: [[12, 12], [20, 20], [28, 28]],
+    4: [[12, 12], [28, 12], [12, 28], [28, 28]],
+    5: [[12, 12], [28, 12], [20, 20], [12, 28], [28, 28]],
+    6: [[12, 11], [28, 11], [12, 20], [28, 20], [12, 29], [28, 29]],
+  };
+  const SVG_NS = "http://www.w3.org/2000/svg";
+
+  document.querySelectorAll<HTMLElement>("[data-die]").forEach((card) => {
+    const roll = card.querySelector<HTMLButtonElement>(".roll");
+    const out = card.querySelector<HTMLParagraphElement>(".out");
+    const pips = card.querySelector<SVGGElement>(".pips");
+    if (!roll || !out || !pips) return;
+
+    const games = JSON.parse(card.dataset.shelf ?? "[]") as Game[];
+    const filters = card.querySelectorAll<HTMLButtonElement>("[data-filter]");
+    const reduceMotion = matchMedia("(prefers-reduced-motion: reduce)").matches;
+    let filter: FilterId = "any";
+
+    const drawFace = (face: 1 | 2 | 3 | 4 | 5 | 6) => {
+      pips.replaceChildren(...PIPS[face].map(([cx, cy]) => {
+        const circle = document.createElementNS(SVG_NS, "circle");
+        circle.setAttribute("cx", String(cx));
+        circle.setAttribute("cy", String(cy));
+        circle.setAttribute("r", "3.4");
+        return circle;
+      }));
+    };
+
+    const show = (game: Game, face: 1 | 2 | 3 | 4 | 5 | 6) => {
+      drawFace(face);
+      const { name, rest } = gameLine(game);
+      const italic = document.createElement("i");
+      italic.textContent = name;
+      out.replaceChildren("Play ", italic, rest);
+    };
+
+    filters.forEach((button) => button.addEventListener("click", () => {
+      filter = button.dataset.filter as FilterId;
+      filters.forEach((item) => item.setAttribute("aria-pressed", String(item === button)));
+    }));
+
+    roll.addEventListener("click", () => {
+      const game = pickGame(games.filter(FILTERS[filter]));
+      if (!game) return;
+      const final = rollFace();
+      if (reduceMotion) {
+        show(game, final);
+        return;
+      }
+      roll.classList.remove("rolling");
+      void roll.offsetWidth;
+      roll.classList.add("rolling");
+      let ticks = 0;
+      const timer = setInterval(() => {
+        drawFace(rollFace());
+        if (++ticks >= 8) {
+          clearInterval(timer);
+          show(game, final);
+        }
+      }, 70);
+    });
+  });
+</script>
+
+<style>
+  .filters { display: flex; gap: 0.35rem; flex-wrap: wrap; margin-top: 0.7rem; }
+  .filters button {
+    font-family: var(--mono); font-size: 0.6rem; letter-spacing: 0.08em; text-transform: uppercase; cursor: pointer;
+    color: var(--muted); background: none; border: 1px solid var(--rule); border-radius: 999px; padding: 0.25rem 0.55rem;
+  }
+  .filters button[aria-pressed="true"] { color: var(--ink); border-color: var(--ink); }
+  .filters button:focus-visible { outline: 2px solid var(--coral); outline-offset: 2px; }
+  .card .card-body { align-items: flex-start; }
+  .card .out { min-height: 3.2em; }
+</style>

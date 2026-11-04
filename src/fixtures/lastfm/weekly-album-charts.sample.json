@@ -1,0 +1,81 @@
+{
+  "sample": true,
+  "weeks": [
+    {
+      "from": 1791115200,
+      "to": 1791720000,
+      "chart": {
+        "weeklyalbumchart": {
+          "album": {
+            "name": "Sample Single Album",
+            "playcount": "12",
+            "url": "https://www.last.fm/music/Sample+Artist/_/Sample+Single+Album",
+            "artist": { "#text": "Sample Artist" },
+            "image": [{ "#text": "https://example.test/sample-album-large.jpg", "size": "large" }],
+            "@attr": { "rank": "1" }
+          }
+        }
+      }
+    },
+    {
+      "from": 1791720000,
+      "to": 1792324800,
+      "chart": {
+        "weeklyalbumchart": {
+          "album": [
+            {
+              "name": "Sample Album",
+              "playcount": "23",
+              "url": "https://www.last.fm/music/Sample+Artist/_/Sample+Album",
+              "artist": { "#text": "Sample Artist" },
+              "image": [
+                { "#text": "https://example.test/sample-album-small.jpg", "size": "small" },
+                { "#text": "https://example.test/sample-album-large.jpg", "size": "large" }
+              ],
+              "@attr": { "rank": "1" }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "from": 1792324800,
+      "to": 1792929600,
+      "chart": {
+        "weeklyalbumchart": {
+          "album": [
+            {
+              "name": "Sample Low Play Album",
+              "playcount": "6",
+              "url": "https://www.last.fm/music/Sample+Artist/_/Sample+Low+Play+Album",
+              "artist": { "#text": "Sample Artist" },
+              "image": [],
+              "@attr": { "rank": "1" }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "from": 1792929600,
+      "to": 1793534400,
+      "chart": {
+        "weeklyalbumchart": {
+          "album": [
+            {
+              "name": "Sample Album",
+              "playcount": "31",
+              "url": "https://www.last.fm/music/Sample+Artist/_/Sample+Album",
+              "artist": { "#text": "Sample Artist" },
+              "image": [
+                { "#text": "https://example.test/sample-album-small.jpg", "size": "small" },
+                { "#text": "https://example.test/sample-album-large.jpg", "size": "large" }
+              ],
+              "@attr": { "rank": "1" }
+            }
+          ]
+        }
+      }
+    }
+  ]
+}

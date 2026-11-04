@@ -1,0 +1,44 @@
+---
+import { dayMonth, yearOf } from "../lib/dates";
+import { PURSUIT_EMPTY } from "../lib/garden/copy";
+import { entryPath } from "../lib/garden/routes";
+import type { GardenEntry } from "../lib/garden/schema";
+
+interface Props {
+  entries: GardenEntry[];
+  paths: ReturnType<typeof import("../lib/garden/routes").entryPaths>;
+}
+
+const { entries, paths } = Astro.props;
+const groups = new Map<number, GardenEntry[]>();
+for (const entry of entries) {
+  const year = yearOf(entry.lastTouched);
+  const group = groups.get(year) ?? [];
+  group.push(entry);
+  groups.set(year, group);
+}
+const years = [...groups.entries()].sort(([a], [b]) => b - a);
+const tagFor = (entry: GardenEntry) => [
+  entry.kind === "note" ? undefined : entry.kind,
+  entry.growth === "evergreen" ? "evergreen" : undefined,
+].filter(Boolean).join(" · ");
+---
+
+<section class="timeline" aria-labelledby="timeline-title">
+  <h2 class="section-title" id="timeline-title">History</h2>
+  {years.length > 0 ? years.map(([year, items]) => (
+    <div class="year">
+      <h3>{year}</h3>
+      <ul class="toc">
+        {items.map((entry) => (
+          <li>
+            <a href={entryPath(paths, entry.id)}>{entry.title}</a>
+            {tagFor(entry) && <span class="tag">{tagFor(entry)}</span>}
+            <span class="leader" aria-hidden="true"></span>
+            <time datetime={entry.lastTouched.toISOString()}>{dayMonth(entry.lastTouched)}</time>
+          </li>
+        ))}
+      </ul>
+    </div>
+  )) : <p class="empty">{PURSUIT_EMPTY}</p>}
+</section>

@@ -1,0 +1,20 @@
+---
+import Lights from "./Lights.astro";
+
+interface Props {
+  current?: "page" | "true";
+  currentRoom?: "garden" | "uses";
+}
+
+const { current, currentRoom = current ? "garden" : undefined } = Astro.props;
+const ROOMS: { id: "garden" | "lists" | "uses"; label: string; href?: string }[] = [
+  { id: "garden", label: "Garden", href: "/garden/" },
+  { id: "lists", label: "Lists" },
+  { id: "uses", label: "Uses", href: "/uses/" },
+];
+---
+
+<nav class="nav" aria-label="Site">
+  {ROOMS.filter((room) => room.href).map((room) => <a href={room.href} aria-current={room.id === currentRoom ? current ?? "page" : undefined}>{room.label}</a>)}
+  <Lights />
+</nav>

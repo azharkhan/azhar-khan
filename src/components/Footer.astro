@@ -1,0 +1,18 @@
+---
+import { longDate, ZONE } from "../lib/dates";
+import { buildNow } from "../lib/now";
+
+const built = buildNow();
+const date = longDate(built);
+const year = built.toLocaleDateString("en-GB", { year: "numeric", timeZone: ZONE });
+---
+
+<footer>
+  <p class="elsewhere"><a href="https://github.com/azharkhan">GitHub</a><span class="dot" aria-hidden="true">·</span><a href="https://www.linkedin.com/in/azharkh">LinkedIn</a><span class="dot" aria-hidden="true">·</span><a href="mailto:azhar@hey.com?subject=Sending%20a%20pigeon%2C%20from%20your%20website">Email</a></p>
+  <p class="colophon">Built with <a href="https://astro.build">Astro</a>, set in <a href="https://fonts.google.com/specimen/Fraunces">Fraunces</a> and <a href="https://fonts.google.com/specimen/Source+Serif+4">Source Serif 4</a>, hosted on <a href="https://pages.cloudflare.com">Cloudflare</a>. Last rebuilt <time datetime={built.toISOString()}>{date}</time>. © 2013–{year}.</p>
+</footer>
+
+<style>
+  .elsewhere { margin: 0 0 1.25rem; }
+  .dot { color: var(--muted); padding: 0 0.55em; }
+</style>

@@ -1,0 +1,36 @@
+---
+import Page from "../../../layouts/Page.astro";
+import Kit from "../../../components/Kit.astro";
+import StatChart from "../../../components/StatChart.astro";
+import Timeline from "../../../components/Timeline.astro";
+import Toy from "../../../components/Toy.astro";
+import { getGarden } from "../../../lib/garden";
+import { statSeries, entriesFor } from "../../../lib/garden/query";
+import { entryPaths, GARDEN } from "../../../lib/garden/routes";
+
+export async function getStaticPaths() {
+  const garden = await getGarden();
+  return garden.pursuits.map((pursuit) => ({ params: { pursuit: pursuit.id } }));
+}
+
+const { pursuit: pursuitId } = Astro.params;
+const garden = await getGarden();
+const pursuit = garden.pursuits.find((candidate) => candidate.id === pursuitId);
+if (!pursuit) throw new Error(`unknown garden pursuit: ${pursuitId}`);
+const entries = entriesFor(garden, pursuit.id);
+const paths = entryPaths(garden);
+const charts = statSeries(garden, pursuit.id);
+---
+
+<Page title={pursuit.title} current="true">
+  <h1 class="page-title">{pursuit.title}</h1>
+  <p class="entry-meta">Since {pursuit.since}</p>
+  <p class="pursuit-blurb">{pursuit.blurb}</p>
+  <Toy toy={pursuit.toy} />
+  {charts.map((series) => <StatChart series={series} />)}
+  <Timeline entries={entries} paths={paths} />
+  <Kit items={pursuit.kit} />
+  <nav class="pursuit-nav" aria-label="Pursuit">
+    <a href={GARDEN}>← Garden</a>
+  </nav>
+</Page>

@@ -1,0 +1,92 @@
+---
+import Footer from "../components/Footer.astro";
+import Ledger from "../components/Ledger.astro";
+import Die from "../components/Die.astro";
+import Nav from "../components/Nav.astro";
+import Opener from "../components/Opener.astro";
+import Base from "../layouts/Base.astro";
+import { BLOG_LINE } from "../lib/home/copy";
+import { ledgerRow } from "../lib/home/ledger";
+import { getGarden } from "../lib/garden";
+import { currently } from "../lib/garden/query";
+import { longDate } from "../lib/dates";
+import { blogLineTarget } from "../lib/garden/wall";
+import { entryPath, entryPaths, GARDEN } from "../lib/garden/routes";
+
+const garden = await getGarden();
+const paths = entryPaths(garden);
+const target = blogLineTarget(garden);
+const blogHref = target ? entryPath(paths, target) : GARDEN;
+const rows = currently(garden).map(ledgerRow);
+const updated = longDate(garden.now);
+---
+
+<Base>
+  <div class="grid">
+    <header class="head"><h1 class="name">Azhar Khan</h1></header>
+    <div class="navcell"><Nav /></div>
+    <div class="intro">
+      <Opener />
+      <dl class="roles">
+        <dt>Now</dt>
+        <dd>Founding Engineer at EvenUp</dd>
+        <dt>Previously</dt>
+        <dd>Hubba &amp; BNOTIONS</dd>
+      </dl>
+    </div>
+    {(rows.length > 0 || garden.shelf.length > 0) && (
+      <aside class="current" aria-label="Currently">
+        <Ledger rows={rows} updated={updated} />
+        {garden.shelf.length > 0 && <Die shelf={garden.shelf} />}
+      </aside>
+    )}
+    <div class="bio">
+      <p>I’m a tinkerer at heart, and I go down the <span data-ref="gaming">rabbit hole</span> (Reddit-hole?) for the several (too many according to my wife) hobbies that I enjoy. <em>(Although in true software fashion, most of my projects are 80% done)</em>.</p>
+      <p>I love bringing people together. Sometimes that looks like a tight, product-minded team shipping great work. Other times, it looks like a table full of cardboard, or a <button type="button" class="quiet" data-lights>dark-leaf shisha session</button> with friends.</p>
+      <p>When I’m off the clock, I’m usually:</p>
+      <ul class="dash">
+        <li>Chasing after my two boys.</li>
+        <li>Hoarding shelf space and logging plays on <a href="https://boardgamegeek.com/profile/azharkhan" data-ref="board-games">BoardGameGeek</a>.</li>
+        <li>Watching too many movies and rating them on <a href="https://letterboxd.com/azhark/" data-ref="films">Letterboxd</a>.</li>
+        <li><span data-ref="reading">Reading actual books</span> and an ever-growing pull-list of comics, after a few years of only reading pull requests.</li>
+      </ul>
+      <p><a id="blog-line" href={blogHref}>{BLOG_LINE}</a></p>
+    </div>
+    <div class="links"><Footer /></div>
+  </div>
+</Base>
+
+
+<style>
+  .grid {
+    max-width: 62rem; margin: 0 auto; padding: clamp(3rem, 9vh, 6rem) 1.5rem 8rem;
+    display: grid; column-gap: 4.5rem;
+    grid-template-columns: minmax(0, 36rem) 21rem;
+    grid-template-areas:
+      "head nav"
+      "intro current"
+      "bio current"
+      "bio links";
+    grid-template-rows: auto auto auto 1fr;
+  }
+  .head { grid-area: head; margin-bottom: 2.25rem; }
+  .navcell { grid-area: nav; align-self: end; margin-bottom: 2.3rem; align-items: center; }
+  .intro { grid-area: intro; }
+  .current { grid-area: current; }
+  .bio { grid-area: bio; }
+  .links { grid-area: links; align-self: end; margin-top: 3rem; }
+
+  .quiet { font: inherit; color: inherit; background: none; border: 0; padding: 0; cursor: pointer; text-align: inherit; text-decoration: underline dotted transparent; text-underline-offset: 0.2em; transition: text-decoration-color 200ms; }
+  .quiet:hover { text-decoration-color: var(--muted); }
+  .quiet:focus-visible { outline: 2px solid var(--coral); outline-offset: 2px; text-decoration-color: var(--muted); }
+
+  @media (max-width: 54rem) {
+    .grid {
+      grid-template-columns: minmax(0, 1fr); max-width: var(--measure);
+      grid-template-areas: "nav" "head" "intro" "current" "bio" "links";
+      grid-template-rows: none;
+    }
+    .navcell { align-self: start; margin-bottom: 2.5rem; }
+    .current { margin-bottom: 3rem; }
+  }
+</style>

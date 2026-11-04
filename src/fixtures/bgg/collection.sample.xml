@@ -1,0 +1,62 @@
+<!-- SAMPLE DATA, not real data about Azhar -->
+<items totalitems="7" termsofuse="https://boardgamegeek.com/xmlapi/termsofuse">
+  <item objecttype="thing" objectid="224517" subtype="boardgame" collid="1">
+    <name sortindex="1">Brass: Birmingham</name>
+    <yearpublished>2018</yearpublished>
+    <thumbnail>https://example.test/sample-brass.jpg</thumbnail>
+    <stats minplayers="2" maxplayers="4" minplaytime="60" maxplaytime="120" playingtime="120">
+      <rating value="N/A" />
+    </stats>
+    <status own="1" prevowned="0" fortrade="0" want="0" wanttoplay="0" wanttobuy="0" wishlist="0" preordered="0" lastmodified="2026-06-01 12:00:00" />
+    <numplays>0</numplays>
+  </item>
+  <item objecttype="thing" objectid="900001" subtype="boardgame" collid="2">
+    <name sortindex="1">Sample Game A</name>
+    <stats minplayers="2" maxplayers="2" minplaytime="20" maxplaytime="30" playingtime="30">
+      <rating value="7.5" />
+    </stats>
+    <status own="1" lastmodified="2026-06-01 12:00:00" />
+    <numplays>0</numplays>
+  </item>
+  <item objecttype="thing" objectid="900002" subtype="boardgame" collid="3">
+    <name sortindex="1">Sample Game B</name>
+    <stats minplayers="3" maxplayers="5" minplaytime="45" maxplaytime="60" playingtime="60">
+      <rating value="N/A" />
+    </stats>
+    <status own="1" lastmodified="2026-06-01 12:00:00" />
+    <numplays>0</numplays>
+  </item>
+  <item objecttype="thing" objectid="900003" subtype="boardgame" collid="4">
+    <name sortindex="1">Sample Game C</name>
+    <stats minplayers="2" maxplayers="4" minplaytime="30" maxplaytime="40" playingtime="40">
+      <rating value="N/A" />
+    </stats>
+    <status own="1" lastmodified="2026-06-01 12:00:00" />
+    <numplays>0</numplays>
+  </item>
+  <item objecttype="thing" objectid="900004" subtype="boardgame" collid="5">
+    <name sortindex="1">Sample Game D</name>
+    <stats minplayers="1" maxplayers="4" minplaytime="60" maxplaytime="90" playingtime="90">
+      <rating value="N/A" />
+    </stats>
+    <status own="1" lastmodified="2026-06-01 12:00:00" />
+    <numplays>0</numplays>
+  </item>
+  <item objecttype="thing" objectid="900005" subtype="boardgame" collid="6">
+    <name sortindex="1">Sample Game E</name>
+    <stats minplayers="2" maxplayers="6" minplaytime="90" maxplaytime="180" playingtime="180">
+      <rating value="N/A" />
+    </stats>
+    <status own="1" lastmodified="2026-06-01 12:00:00" />
+    <numplays>0</numplays>
+  </item>
+  <item objecttype="thing" objectid="295947" subtype="boardgame" collid="7">
+    <name sortindex="1">Cascadia</name>
+    <thumbnail>https://example.test/sample-cascadia.jpg</thumbnail>
+    <stats minplayers="1" maxplayers="4" minplaytime="15" maxplaytime="30" playingtime="30">
+      <rating value="N/A" />
+    </stats>
+    <status own="1" lastmodified="2026-06-01 12:00:00" />
+    <numplays>2</numplays>
+  </item>
+</items>

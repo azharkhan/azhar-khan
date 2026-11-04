@@ -1,0 +1,16 @@
+---
+import { Image } from "astro:assets";
+import type { ImageMetadata } from "astro";
+import type { GardenEntry } from "../lib/garden/schema";
+
+interface Props {
+  photo: NonNullable<GardenEntry["photo"]>;
+}
+
+const { photo } = Astro.props;
+---
+
+<figure class="print">
+  <Image src={photo.src as ImageMetadata} alt={photo.alt} format="webp" widths={[640, 1280]} sizes="(min-width: 40rem) 35rem, 100vw" />
+  {photo.caption && <figcaption>{photo.caption}</figcaption>}
+</figure>

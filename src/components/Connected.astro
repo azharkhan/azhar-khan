@@ -1,0 +1,33 @@
+---
+import type { GardenEntry, Pursuit } from "../lib/garden/schema";
+import { entryPath } from "../lib/garden/routes";
+
+interface Props {
+  entry: GardenEntry;
+  connected: GardenEntry[];
+  pursuits: Pursuit[];
+  paths: ReturnType<typeof import("../lib/garden/routes").entryPaths>;
+}
+
+const { entry, connected, pursuits, paths } = Astro.props;
+const source = entry.href ?? entry.url;
+const links = [
+  ...connected.map((item) => ({ label: item.title, href: entryPath(paths, item.id), external: false })),
+  ...pursuits.map((pursuit) => ({ label: pursuit.title, href: `/garden/${pursuit.id}/`, external: false })),
+  ...(source ? [{ label: new URL(source).hostname.replace(/^www\./, ""), href: source, external: true }] : []),
+];
+---
+
+{links.length > 0 && (
+  <section class="connected" aria-labelledby="connected-title">
+    <h2 class="section-title" id="connected-title">Connected to</h2>
+    <p class="connected-links">
+      {links.map((link, index) => (
+        <>
+          {index > 0 && <span aria-hidden="true"> · </span>}
+          <a href={link.href} referrerpolicy={link.external ? "no-referrer" : undefined}>{link.label}</a>
+        </>
+      ))}
+    </p>
+  </section>
+)}

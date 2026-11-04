@@ -1,0 +1,127 @@
+---
+import type { LedgerRow } from "../lib/home/ledger";
+
+interface Props {
+  rows: LedgerRow[];
+  updated: string;
+}
+
+const { rows, updated } = Astro.props;
+const icons = import.meta.glob("../icons/*.svg", { eager: true, import: "default" }) as Record<string, typeof import("../icons/cube.svg").default>;
+---
+
+{rows.length > 0 && (
+  <>
+    <h2 class="label">Currently</h2>
+    <ol class="log">
+      {rows.map((row) => {
+        const Icon = icons[`../icons/${row.icon}.svg`];
+        if (!Icon) throw new Error(`Missing icon for pursuit ${row.key}: ${row.icon}`);
+        return (
+          <li data-key={row.key}>
+            <span class:list={["k", row.colour !== "none" && `c-${row.colour}`]}><Icon class="ico" aria-hidden="true" />{row.label}</span>
+            <span class="v">
+              {row.title !== undefined ? (
+                row.href ? (
+                  <a href={row.href}>{row.italic ? <i>{row.title}</i> : row.title}</a>
+                ) : row.italic ? <i>{row.title}</i> : row.title
+              ) : (
+                <span class="blurb">{row.blurb}</span>
+              )}
+            </span>
+            {row.metric && (
+              <span class="m">
+                {row.metric.kind === "stars" ? (
+                  row.stub ? (
+                    <button type="button" class="stars-btn" data-stub={`stub-${row.key}`} aria-expanded="false" aria-controls={`stub-${row.key}`} aria-label={`${row.metric.label}. Show ticket`}>{row.metric.text}</button>
+                  ) : (
+                    <span class="stars" role="img" aria-label={row.metric.label}>{row.metric.text}</span>
+                  )
+                ) : row.metric.kind === "progress" ? (
+                  <><span class="ribbon" aria-hidden="true"><i style={`width:${row.metric.value}%`}></i></span>{row.metric.text}</>
+                ) : row.metric.kind === "stat" ? (
+                  <>{row.metric.text}{row.metric.change && <span class="delta">{row.metric.change}</span>}</>
+                ) : row.metric.text}
+              </span>
+            )}
+            {row.stub && (
+              <div class="stub" id={`stub-${row.key}`} hidden>
+                <div class="stub-main"><span class="k">Admit one · Letterboxd</span><i>{row.stub.title}</i><p>“{row.stub.line}”</p></div>
+                <div class="stub-tear"><time datetime={row.stub.iso}>{row.stub.date}</time></div>
+              </div>
+            )}
+          </li>
+        );
+      })}
+    </ol>
+    <p class="meta">This week. Updated {updated}.</p>
+  </>
+)}
+
+<script>
+  document.querySelectorAll<HTMLButtonElement>("[data-stub]").forEach((button) => {
+    const stub = document.getElementById(button.dataset.stub ?? "");
+    if (!stub) return;
+    button.addEventListener("click", () => {
+      const open = button.getAttribute("aria-expanded") !== "true";
+      button.setAttribute("aria-expanded", String(open));
+      stub.hidden = !open;
+    });
+  });
+
+  document.querySelectorAll<HTMLElement>("[data-ref]").forEach((element) => {
+    const row = document.querySelector<HTMLElement>(`.log [data-key="${element.dataset.ref}"]`);
+    if (!row) return;
+    element.addEventListener("mouseenter", () => row.classList.add("lit"));
+    element.addEventListener("mouseleave", () => row.classList.remove("lit"));
+    element.addEventListener("focus", () => row.classList.add("lit"));
+    element.addEventListener("blur", () => row.classList.remove("lit"));
+  });
+</script>
+
+<style>
+  .log { list-style: none; padding: 0; margin: 0 0 0.6rem; border-top: 1px solid var(--rule); }
+  .log li {
+    display: grid; grid-template-columns: 5.4rem minmax(0, 1fr) auto; column-gap: 0.6rem; align-items: baseline;
+    padding: 0.5rem 0.4rem; margin: 0 -0.4rem; border-bottom: 1px solid var(--rule); line-height: 1.35; font-size: 0.95em;
+    transition: background-color 160ms ease;
+  }
+  .log .k { display: inline-flex; align-items: center; gap: 0.4rem; font-family: var(--mono); font-size: 0.62rem; letter-spacing: 0.09em; text-transform: uppercase; color: var(--muted); transition: color 160ms; }
+  .log .k .ico { width: 0.95rem; height: 0.95rem; color: var(--c); }
+  .log .v { min-width: 0; }
+  .log .m { display: inline-flex; align-items: center; gap: 0.3rem; font-family: var(--mono); font-size: 0.7rem; color: var(--muted); white-space: nowrap; font-variant-numeric: tabular-nums; }
+  .log .blurb { color: var(--muted); font-style: italic; }
+  .log .delta { color: var(--muted); }
+  .log li.lit { background: var(--wash); }
+  .log li.lit .k { color: var(--ink); }
+
+  .stars-btn { font: inherit; font-family: var(--body); font-size: 0.85rem; color: var(--coral); background: none; border: 0; padding: 0; cursor: pointer; letter-spacing: 0.04em; }
+  .stars-btn:hover, .stars-btn[aria-expanded="true"] { text-decoration: underline dotted; text-underline-offset: 0.25em; }
+  .stars-btn:focus-visible { outline: 2px solid var(--coral); outline-offset: 2px; }
+
+  .stub {
+    grid-column: 1 / -1; position: relative; margin: 0.65rem 0 0.25rem; display: grid; grid-template-columns: 1fr 3rem;
+    background: var(--card); border: 1px solid var(--rule); border-top: 3px solid var(--coral); border-radius: 3px;
+    animation: print 420ms cubic-bezier(.2,.8,.3,1);
+  }
+  .stub[hidden] { display: none; }
+  .stub::before, .stub::after { content: ""; position: absolute; right: calc(3rem - 6px); width: 12px; height: 12px; border-radius: 50%; background: var(--paper); border: 1px solid var(--rule); }
+  .stub::before { top: -8px; border-top-color: transparent; }
+  .stub::after { bottom: -7px; border-bottom-color: transparent; }
+  .stub-main { padding: 0.6rem 0.8rem 0.7rem; font-size: 0.9em; line-height: 1.45; }
+  .stub-main .k { display: block; font-family: var(--mono); font-size: 0.58rem; letter-spacing: 0.12em; text-transform: uppercase; color: var(--coral-ink); margin-bottom: 0.2rem; }
+  .stub-main p { margin: 0.3rem 0 0; font-style: italic; color: var(--muted); }
+  .stub-tear {
+    border-left: 2px dashed var(--rule); display: flex; align-items: center; justify-content: center;
+    font-family: var(--mono); font-size: 0.58rem; letter-spacing: 0.12em; text-transform: uppercase; color: var(--muted);
+    writing-mode: vertical-rl; transform: rotate(180deg);
+  }
+  @keyframes print { from { clip-path: inset(0 0 100% 0); transform: translateY(-6px); } to { clip-path: inset(0 0 -20px 0); transform: none; } }
+
+  .ribbon { display: inline-block; width: 2.5rem; height: 3px; background: var(--rule); border-radius: 2px; overflow: hidden; }
+  .ribbon i { display: block; height: 100%; background: var(--p-yellow); }
+  @media (prefers-reduced-motion: reduce) { .stub { animation: none; } }
+
+  :global(.current) .meta { margin: 0 0 1.5rem; }
+  :global(.current) .label { margin-top: 0.35rem; }
+</style>

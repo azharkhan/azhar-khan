@@ -1,0 +1,16 @@
+{
+  "sample": true,
+  "recent": [
+    { "Date": "2026-10-29 19:12:00", "GameID": 1, "GameTitle": "Super Metroid", "GameIcon": "/Images/000001.png", "ConsoleName": "Super Nintendo", "Title": "Sample achievement one" },
+    { "Date": "2026-10-30 20:24:00", "GameID": 1, "GameTitle": "Super Metroid", "GameIcon": "/Images/000001.png", "ConsoleName": "Super Nintendo", "Title": "Sample achievement two" },
+    { "Date": "2026-10-31 21:36:00", "GameID": 1, "GameTitle": "Super Metroid", "GameIcon": "/Images/000001.png", "ConsoleName": "Super Nintendo", "Title": "Sample achievement three" },
+    { "Date": "2026-11-01 22:48:00", "GameID": 1, "GameTitle": "Super Metroid", "GameIcon": "/Images/000001.png", "ConsoleName": "Super Nintendo", "Title": "Sample achievement four" }
+  ],
+  "awards": {
+    "VisibleUserAwards": [
+      { "AwardType": "Game Beaten", "AwardData": 1, "AwardedAt": "2026-11-01T22:50:00+00:00", "Title": "Super Metroid", "ImageIcon": "/Images/000001.png" },
+      { "AwardType": "Mastery/Completion", "AwardData": 2, "AwardDataExtra": 1, "AwardedAt": "2026-08-15T12:00:00+00:00", "Title": "Sample RA Game", "ImageIcon": "/Images/000002.png" },
+      { "AwardType": "Achievement Points Yield", "AwardData": 3, "AwardDataExtra": 250, "AwardedAt": "2026-10-15T12:00:00+00:00", "Title": null, "ImageIcon": null }
+    ]
+  }
+}

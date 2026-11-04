@@ -1,0 +1,13 @@
+<!-- SAMPLE DATA, not real data about Azhar -->
+<plays username="azharkhan" total="3" page="1">
+  <play id="1" date="2026-10-30" quantity="1" length="30" incomplete="0" location="">
+    <item name="Cascadia" objecttype="thing" objectid="295947" />
+  </play>
+  <play id="2" date="2026-10-31" quantity="1" length="30" incomplete="0" location="">
+    <item name="Cascadia" objecttype="thing" objectid="295947" />
+    <comments>[placeholder: sample play comment]</comments>
+  </play>
+  <play id="3" date="2026-09-05" quantity="1" length="30" incomplete="0" location="">
+    <item name="Sample Borrowed Game" objecttype="thing" objectid="900008" />
+  </play>
+</plays>

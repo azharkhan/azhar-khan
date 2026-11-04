@@ -1,0 +1,39 @@
+---
+import Page from "../layouts/Page.astro";
+import { getGarden } from "../lib/garden";
+import { pursuitPath } from "../lib/garden/routes";
+import sections from "../content/uses.json";
+
+const garden = await getGarden();
+const kitPursuits = garden.pursuits.filter((pursuit) => pursuit.kit.length > 0);
+---
+
+<Page title="Uses" currentRoom="uses">
+  <h1 class="page-title">Uses</h1>
+  {sections.map((section) => (
+    <section class="uses-section" aria-labelledby={`uses-${section.id}`}>
+      <h2 class="section-title" id={`uses-${section.id}`}>{section.title}</h2>
+      <ul class="dash uses-list">
+        {section.items.map((item) => (
+          <li><span class="uses-name">{item.name}</span><span class="uses-why"> — {item.why}</span></li>
+        ))}
+      </ul>
+    </section>
+  ))}
+  <section class="uses-kit" aria-labelledby="uses-kit-title">
+    <h2 class="section-title" id="uses-kit-title">Kit</h2>
+    {kitPursuits.map((pursuit) => (
+      <div class="uses-kit-pursuit">
+        <h3><a href={pursuitPath(pursuit.id)}>{pursuit.title}</a></h3>
+        <ul class="dash uses-list">
+          {pursuit.kit.map((item) => (
+            <li>
+              <span class="uses-name">{item.href ? <a href={item.href}>{item.name}</a> : item.name}</span>
+              {item.why && <span class="uses-why"> — {item.why}</span>}
+            </li>
+          ))}
+        </ul>
+      </div>
+    ))}
+  </section>
+</Page>

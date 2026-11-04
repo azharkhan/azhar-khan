@@ -1,0 +1,47 @@
+---
+import { dayMonth, yearOf } from "../lib/dates";
+import { chartModel } from "../lib/garden/chart";
+import type { StatSeries } from "../lib/garden/query";
+
+interface Props {
+  series: StatSeries;
+}
+
+const { series } = Astro.props;
+const model = chartModel(series);
+const first = model.points[0]!;
+const last = model.points.at(-1)!;
+const withUnit = (value: number) => `${value}${series.unit ?? ""}`;
+const label = `${series.label}: ${withUnit(first.value)} to ${withUnit(last.value)} over ${model.points.length} entries`;
+const dateLabel = (date: Date) => `${dayMonth(date)} ${yearOf(date)}`;
+---
+
+<figure class="chart">
+  <figcaption class="chart-title">{series.label}</figcaption>
+  <div class="chart-summary" aria-hidden="true">
+    <span>min {withUnit(model.min)}</span>
+    <span>max {withUnit(model.max)}</span>
+  </div>
+  <svg viewBox={`0 0 ${model.width} ${model.height}`} role="img" aria-label={label}>
+    <path d={model.path} />
+    {model.points.map((point, index) => (
+      <circle cx={point.x} cy={point.y} r={index === model.points.length - 1 ? 5 : 3.5} />
+    ))}
+  </svg>
+  <div class="chart-dates" aria-hidden="true">
+    <time datetime={model.first.toISOString()}>{dateLabel(model.first)}</time>
+    <time datetime={model.last.toISOString()}>{dateLabel(model.last)}</time>
+  </div>
+  <table class="sr-only">
+    <caption>{series.label} values</caption>
+    <thead><tr><th scope="col">Date</th><th scope="col">Value</th></tr></thead>
+    <tbody>
+      {model.points.map((point) => (
+        <tr>
+          <td><time datetime={point.at.toISOString()}>{dateLabel(point.at)}</time></td>
+          <td>{withUnit(point.value)}</td>
+        </tr>
+      ))}
+    </tbody>
+  </table>
+</figure>

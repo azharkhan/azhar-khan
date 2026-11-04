@@ -1,0 +1,10 @@
+---
+import { OPENERS } from "../lib/home/copy";
+---
+
+<p class="lede" id="opener" data-openers={JSON.stringify(OPENERS)}>{OPENERS[0]}</p>
+<script is:inline>
+  const opener = document.getElementById("opener");
+  const openers = JSON.parse(opener?.dataset.openers ?? "[]");
+  if (opener) opener.textContent = openers[Math.floor(Math.random() * openers.length)];
+</script>
