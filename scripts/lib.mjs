@@ -23,8 +23,10 @@ const types = {
   ".txt": "text/plain; charset=utf-8",
 };
 
+export const FIXTURE_DIST = "build/fixture-dist";
+
 export function buildFixtures() {
-  execFileSync("npm", ["run", "build"], {
+  execFileSync("npm", ["run", "build", "--", "--outDir", FIXTURE_DIST], {
     stdio: "inherit",
     env: { ...process.env, BUILD_NOW: NOW, FEEDS: "fixtures" },
   });

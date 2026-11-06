@@ -5,20 +5,12 @@ import Die from "../components/Die.astro";
 import Nav from "../components/Nav.astro";
 import Opener from "../components/Opener.astro";
 import Base from "../layouts/Base.astro";
-import { BLOG_LINE } from "../lib/home/copy";
 import { ledgerRow } from "../lib/home/ledger";
 import { getGarden } from "../lib/garden";
 import { currently } from "../lib/garden/query";
-import { longDate } from "../lib/dates";
-import { blogLineTarget } from "../lib/garden/wall";
-import { entryPath, entryPaths, GARDEN } from "../lib/garden/routes";
 
 const garden = await getGarden();
-const paths = entryPaths(garden);
-const target = blogLineTarget(garden);
-const blogHref = target ? entryPath(paths, target) : GARDEN;
-const rows = currently(garden).map(ledgerRow);
-const updated = longDate(garden.now);
+const rows = currently(garden).map((row) => ledgerRow(row));
 ---
 
 <Base>
@@ -34,14 +26,13 @@ const updated = longDate(garden.now);
         <dd>Hubba &amp; BNOTIONS</dd>
       </dl>
     </div>
-    {(rows.length > 0 || garden.shelf.length > 0) && (
-      <aside class="current" aria-label="Currently">
-        <Ledger rows={rows} updated={updated} />
-        {garden.shelf.length > 0 && <Die shelf={garden.shelf} />}
+    {rows.length > 0 && (
+      <aside class="current" aria-label="Lately">
+        <Ledger rows={rows} />
       </aside>
     )}
     <div class="bio">
-      <p>I’m a tinkerer at heart, and I go down the <span data-ref="gaming">rabbit hole</span> (Reddit-hole?) for the several (too many according to my wife) hobbies that I enjoy. <em>(Although in true software fashion, most of my projects are 80% done)</em>.</p>
+      <p>I’m a tinkerer at heart, prone to falling down Reddit rabbit-holes for one too many hobbies. In true software fashion, most of my personal projects are forever 80% done.</p>
       <p>I love bringing people together. Sometimes that looks like a tight, product-minded team shipping great work. Other times, it looks like a table full of cardboard, or a <button type="button" class="quiet" data-lights>dark-leaf shisha session</button> with friends.</p>
       <p>When I’m off the clock, I’m usually:</p>
       <ul class="dash">
@@ -50,7 +41,7 @@ const updated = longDate(garden.now);
         <li>Watching too many movies and rating them on <a href="https://letterboxd.com/azhark/" data-ref="films">Letterboxd</a>.</li>
         <li><span data-ref="reading">Reading actual books</span> and an ever-growing pull-list of comics, after a few years of only reading pull requests.</li>
       </ul>
-      <p><a id="blog-line" href={blogHref}>{BLOG_LINE}</a></p>
+      {garden.shelf.length > 0 && <Die shelf={garden.shelf} />}
     </div>
     <div class="links"><Footer /></div>
   </div>

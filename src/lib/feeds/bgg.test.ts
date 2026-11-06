@@ -5,7 +5,7 @@ import type { ShelfGame } from "../garden/schema";
 const now = new Date("2026-11-02T17:00:00Z");
 const bgg = createBggAdapter({ retryDelayMs: 0 });
 
-function parse(raw: { sample: boolean; collection: string; plays: string[] }) {
+function parse(raw: Parameters<typeof bgg.parse>[0]) {
   return bgg.parse(raw, { now });
 }
 
@@ -51,6 +51,48 @@ describe("BoardGameGeek adapter", () => {
     const unplayed = things.find((thing) => thing.subject === "bgg:224517");
     expect(unplayed?.history.map((event) => event.verb)).toEqual(["added"]);
     expect(unplayed?.metric).toBeUndefined();
+  });
+
+  it("turns imported BG Stats plays into shared BGG history with counts and shelf covers", () => {
+    const output = parse({
+      sample: false,
+      collection: "",
+      plays: [],
+      fallback: {
+        plays: [
+          { id: "123", name: "Imported Game", date: "2026-10-01", thumb: "https://cf.geekdo-images.com/imported-game.jpg" },
+          { id: "123", name: "Imported Game", date: "2026-10-01" },
+          { id: "123", name: "Imported Game", date: "2026-10-02" },
+          { id: "456", name: "Other Imported Game", date: "2026-10-03" },
+        ],
+        shelf: [{
+          id: "123", name: "Shelf Game Name", minPlayers: 1, maxPlayers: 4, minutes: 30, plays: 0,
+          cover: "https://covers.example.test/imported-game.jpg",
+        }],
+      },
+    });
+
+    expect(output.shelf).toHaveLength(1);
+    expect(output.things).toHaveLength(2);
+    expect(output.things[0]).toMatchObject({
+      subject: "bgg:123",
+      title: "Imported Game",
+      href: "https://boardgamegeek.com/boardgame/123",
+      cover: "https://cf.geekdo-images.com/imported-game.jpg",
+      metric: { kind: "times", value: 3 },
+      sample: false,
+      history: [
+        { at: new Date("2026-10-01T12:00:00Z"), verb: "played", value: 2 },
+        { at: new Date("2026-10-02T12:00:00Z"), verb: "played", value: 1 },
+      ],
+    });
+    expect(output.things[1]).toMatchObject({
+      subject: "bgg:456",
+      title: "Other Imported Game",
+      metric: { kind: "times", value: 1 },
+      history: [{ at: new Date("2026-10-03T12:00:00Z"), verb: "played", value: 1 }],
+    });
+    expect(output.things.every((thing) => !thing.history.some((event) => event.verb === "added"))).toBe(true);
   });
 
   it("combines plays on the same date and joins non-empty comments", () => {

@@ -3,6 +3,7 @@ import { dayMonth, yearOf } from "../lib/dates";
 import { PURSUIT_EMPTY } from "../lib/garden/copy";
 import { entryPath } from "../lib/garden/routes";
 import type { GardenEntry } from "../lib/garden/schema";
+import { formatStatValue } from "../lib/garden/stats";
 
 interface Props {
   entries: GardenEntry[];
@@ -18,10 +19,7 @@ for (const entry of entries) {
   groups.set(year, group);
 }
 const years = [...groups.entries()].sort(([a], [b]) => b - a);
-const tagFor = (entry: GardenEntry) => [
-  entry.kind === "note" ? undefined : entry.kind,
-  entry.growth === "evergreen" ? "evergreen" : undefined,
-].filter(Boolean).join(" · ");
+const tagFor = (entry: GardenEntry) => entry.kind === "note" ? undefined : entry.kind;
 ---
 
 <section class="timeline" aria-labelledby="timeline-title">
@@ -33,6 +31,7 @@ const tagFor = (entry: GardenEntry) => [
         {items.map((entry) => (
           <li>
             <a href={entryPath(paths, entry.id)}>{entry.title}</a>
+            {entry.kind === "stat" && entry.stat && <span class="stat-value"> · {formatStatValue(entry.stat.value, entry.stat.unit)}</span>}
             {tagFor(entry) && <span class="tag">{tagFor(entry)}</span>}
             <span class="leader" aria-hidden="true"></span>
             <time datetime={entry.lastTouched.toISOString()}>{dayMonth(entry.lastTouched)}</time>

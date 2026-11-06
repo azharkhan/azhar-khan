@@ -9,14 +9,16 @@ export type FeedOutput = { things: FeedThing[]; shelf?: ShelfGame[] };
 export interface Adapter<Raw = unknown> extends Gate {
   id: string;
   pursuit: string;
+  liveTimeoutMs?: number;
   live(ctx: LiveContext): Promise<Raw>;
   fixture(): Promise<Raw>;
+  realFallback?(): Promise<Raw>;
   parse(raw: Raw, ctx: { now: Date }): FeedOutput;
 }
 
 export type FeedStatus = { adapter: string; pursuit: string; mode: FeedMode; error?: string; dropped: number };
 export type FeedResult = FeedStatus & FeedOutput;
-export type RunOptions = PolicyContext & { now: Date; fetch?: typeof fetch; timeoutMs?: number; log?: (line: string) => void };
+export type RunOptions = PolicyContext & { now: Date; fetch?: typeof fetch; timeoutMs?: number; log?: (line: string) => void; bggShelf?: ShelfGame[] };
 
 type ParsedFeedOutput = { things: unknown[]; shelf?: unknown[] };
 
@@ -67,6 +69,7 @@ function raceAbort<T>(promise: Promise<T>, signal: AbortSignal): Promise<T> {
 export async function runFeeds(adapters: readonly Adapter[], opts: RunOptions): Promise<FeedResult[]> {
   return Promise.all(adapters.map(async (adapter) => {
     const missing = missingVars(adapter, opts.env);
+    const bggShelf = adapter.id === "bgg" ? opts.bggShelf : undefined;
     let mode = feedMode(adapter, opts);
     let error: string | undefined;
     let output: ParsedFeedOutput | undefined;
@@ -78,12 +81,20 @@ export async function runFeeds(adapters: readonly Adapter[], opts: RunOptions): 
         error = `missing env vars: ${missing.join(", ")}`;
         report(error);
       }
-      return { adapter: adapter.id, pursuit: adapter.pursuit, mode, error, dropped: 0, things: [] };
+      return {
+        adapter: adapter.id,
+        pursuit: adapter.pursuit,
+        mode,
+        error,
+        dropped: 0,
+        things: [],
+        ...(bggShelf === undefined ? {} : { shelf: bggShelf }),
+      };
     }
 
     if (mode === "live") {
       try {
-        const signal = AbortSignal.timeout(opts.timeoutMs ?? 10000);
+        const signal = AbortSignal.timeout(adapter.liveTimeoutMs ?? opts.timeoutMs ?? 10000);
         const raw = await raceAbort(adapter.live({
           env: opts.env,
           now: opts.now,
@@ -99,19 +110,41 @@ export async function runFeeds(adapters: readonly Adapter[], opts: RunOptions): 
     }
 
     if (mode === "fixture") {
-      try {
-        const raw = await adapter.fixture();
-        output = parseOutput(adapter, raw, opts.now);
-      } catch (cause) {
-        const fixtureError = messageOf(cause, adapter, opts.env);
-        error = error ? `${error}; fixture failed: ${fixtureError}` : fixtureError;
-        report(`fixture failed: ${fixtureError}`);
-        mode = "off";
+      if (adapter.realFallback && opts.env.FEEDS !== "fixtures") {
+        try {
+          const raw = await adapter.realFallback();
+          output = parseOutput(adapter, raw, opts.now);
+        } catch (cause) {
+          const fallbackError = messageOf(cause, adapter, opts.env);
+          error = error ? `${error}; fallback failed: ${fallbackError}` : fallbackError;
+          report(`fallback failed: ${fallbackError}`);
+          mode = "off";
+        }
+      } else if (bggShelf !== undefined) {
+        output = { things: [], shelf: bggShelf };
+      } else {
+        try {
+          const raw = await adapter.fixture();
+          output = parseOutput(adapter, raw, opts.now);
+        } catch (cause) {
+          const fixtureError = messageOf(cause, adapter, opts.env);
+          error = error ? `${error}; fixture failed: ${fixtureError}` : fixtureError;
+          report(`fixture failed: ${fixtureError}`);
+          mode = "off";
+        }
       }
     }
 
     if (mode === "off" || !output) {
-      return { adapter: adapter.id, pursuit: adapter.pursuit, mode: "off", error, dropped: 0, things: [] };
+      return {
+        adapter: adapter.id,
+        pursuit: adapter.pursuit,
+        mode: "off",
+        error,
+        dropped: 0,
+        things: [],
+        ...(bggShelf === undefined ? {} : { shelf: bggShelf }),
+      };
     }
 
     let dropped = 0;

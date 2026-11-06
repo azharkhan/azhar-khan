@@ -11,8 +11,10 @@
     "build": "ASTRO_TELEMETRY_DISABLED=1 astro build",
     "preview": "astro preview",
     "test": "vitest run",
-    "check": "ASTRO_TELEMETRY_DISABLED=1 astro check && FEEDS=fixtures npm run build && npm test",
+    "check": "ASTRO_TELEMETRY_DISABLED=1 astro check && FEEDS=fixtures npm run build -- --outDir build/fixture-dist && npm test",
     "shots": "node scripts/shots.mjs",
+    "bgg:import": "node --experimental-strip-types scripts/bgg-import.mjs",
+    "bgstats:import": "node --experimental-strip-types scripts/bgstats-import.mjs",
     "checks:home": "node scripts/home-checks.mjs",
     "checks:garden": "node scripts/garden-checks.mjs",
     "astro": "astro"

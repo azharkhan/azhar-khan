@@ -8,7 +8,6 @@ interface Props {
 
 const { current, currentRoom = current ? "garden" : undefined } = Astro.props;
 const ROOMS: { id: "garden" | "lists" | "uses"; label: string; href?: string }[] = [
-  { id: "garden", label: "Garden", href: "/garden/" },
   { id: "lists", label: "Lists" },
   { id: "uses", label: "Uses", href: "/uses/" },
 ];

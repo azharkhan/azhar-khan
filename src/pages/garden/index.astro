@@ -5,6 +5,7 @@ import { getGarden } from "../../lib/garden";
 import { entriesFor, statMetric } from "../../lib/garden/query";
 import { GARDEN, entryPath, entryPaths, pursuitPath } from "../../lib/garden/routes";
 import { GARDEN_EMPTY, GARDEN_INTRO } from "../../lib/garden/copy";
+import { yearOf } from "../../lib/dates";
 
 const garden = await getGarden();
 const paths = entryPaths(garden);
@@ -28,8 +29,8 @@ const counts = new Map(garden.pursuits.map((pursuit) => [pursuit.id, entriesFor(
         if (!pursuit) throw new Error(`unknown primary pursuit ${primary} for ${entry.id}`);
         const metric = entry.metric ?? statMetric(garden, entry, primary);
         return (
-          <li data-touched={entry.lastTouched.toISOString()} data-growth={entry.growth}>
-            <Card entry={entry} path={entryPath(paths, entry.id)} metric={metric} pursuitLabel={pursuit.title} />
+          <li data-touched={entry.lastTouched.toISOString()}>
+            <Card entry={entry} path={entryPath(paths, entry.id)} metric={metric} pursuitLabel={pursuit.title} buildYear={yearOf(garden.now)} />
           </li>
         );
       })}

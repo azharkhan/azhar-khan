@@ -1,0 +1,7 @@
+---
+import { inlineLinks } from "../lib/inline-links";
+
+const { text } = Astro.props as { text: string };
+const parts = inlineLinks(text);
+---
+{parts.map((part) => part.href ? <a href={part.href}>{part.text}</a> : part.text)}

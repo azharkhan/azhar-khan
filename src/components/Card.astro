@@ -4,18 +4,20 @@ import type { ImageMetadata } from "astro";
 import { dayMonth, yearOf } from "../lib/dates";
 import { metricView } from "../lib/home/ledger";
 import type { GardenEntry, Metric } from "../lib/garden/schema";
-import { cardVariant, coverAspect, excerpt } from "../lib/garden/wall";
+import { cardContext, cardVariant, coverAspect, excerpt } from "../lib/garden/wall";
 
 interface Props {
   entry: GardenEntry;
   path: string;
   metric?: Metric;
   pursuitLabel: string;
+  buildYear: number;
 }
 
-const { entry, path, metric, pursuitLabel } = Astro.props;
+const { entry, path, metric, pursuitLabel, buildYear } = Astro.props;
 const variant = cardVariant(entry);
-const view = metric ? metricView(metric) : undefined;
+const context = cardContext(entry, buildYear, metric);
+const view = !context && metric ? metricView(metric) : undefined;
 const when = `${dayMonth(entry.lastTouched)} ${yearOf(entry.lastTouched)}`;
 const description = excerpt(entry);
 
@@ -37,6 +39,7 @@ const description = excerpt(entry);
   )}
   <p class="mono card-meta">{pursuitLabel} · <time datetime={entry.lastTouched.toISOString()}>{when}</time></p>
   <h2 class="card-title"><a href={path}>{entry.title}</a></h2>
+  {context && <p class="card-context">{context}</p>}
   {view && (
     <p class="card-metric">
       {view.kind === "stars" ? <span class="stars" role="img" aria-label={view.label}>{view.text}</span> : view.text}
@@ -44,5 +47,4 @@ const description = excerpt(entry);
     </p>
   )}
   {description && <p class="card-excerpt">{description}</p>}
-  <p class="mono card-growth" data-growth={entry.growth}>{entry.growth}</p>
 </article>

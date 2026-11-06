@@ -9,7 +9,7 @@ const filterIds = FILTER_IDS.filter((id) => id === "any" || games.some((game) =>
 
 {games.length > 0 && (
   <div class="card needs-js" data-die data-shelf={JSON.stringify(games)}>
-    <p class="card-title">Can’t decide what to play?</p>
+    <p class="card-title die-title">Can’t decide what to play?</p>
     <div class="filters" role="group" aria-label="Filter games">
       {filterIds.map((id) => <button type="button" data-filter={id} aria-pressed={id === "any" ? "true" : "false"}>{FILTER_LABELS[id]}</button>)}
     </div>
@@ -17,7 +17,7 @@ const filterIds = FILTER_IDS.filter((id) => id === "any" || games.some((game) =>
       <button type="button" class="roll" aria-label="Roll the die for a game to play">
         <svg viewBox="0 0 40 40" aria-hidden="true"><rect x="3" y="3" width="34" height="34" rx="8" fill="none" stroke="currentColor" stroke-width="2.6"/><g class="pips" fill="var(--coral)"><circle cx="12" cy="12" r="3.4"/><circle cx="28" cy="12" r="3.4"/><circle cx="20" cy="20" r="3.4"/><circle cx="12" cy="28" r="3.4"/><circle cx="28" cy="28" r="3.4"/></g></svg>Roll
       </button>
-      <p class="out" aria-live="polite">One of my games, picked for you.</p>
+      <p class="out" aria-live="polite"><span>One of my games, picked for you.</span></p>
     </div>
   </div>
 )}
@@ -62,7 +62,9 @@ const filterIds = FILTER_IDS.filter((id) => id === "any" || games.some((game) =>
       const { name, rest } = gameLine(game);
       const italic = document.createElement("i");
       italic.textContent = name;
-      out.replaceChildren("Play ", italic, rest);
+      const line = document.createElement("span");
+      line.append("Play ", italic, rest);
+      out.replaceChildren(line);
     };
 
     filters.forEach((button) => button.addEventListener("click", () => {
@@ -94,6 +96,7 @@ const filterIds = FILTER_IDS.filter((id) => id === "any" || games.some((game) =>
 </script>
 
 <style>
+  .card[data-die] { margin-top: 2rem; background: var(--wash); border-top: 3px solid var(--coral); }
   .filters { display: flex; gap: 0.35rem; flex-wrap: wrap; margin-top: 0.7rem; }
   .filters button {
     font-family: var(--mono); font-size: 0.6rem; letter-spacing: 0.08em; text-transform: uppercase; cursor: pointer;
@@ -101,6 +104,8 @@ const filterIds = FILTER_IDS.filter((id) => id === "any" || games.some((game) =>
   }
   .filters button[aria-pressed="true"] { color: var(--ink); border-color: var(--ink); }
   .filters button:focus-visible { outline: 2px solid var(--coral); outline-offset: 2px; }
-  .card .card-body { align-items: flex-start; }
-  .card .out { min-height: 3.2em; }
+  .card .card-title.die-title { padding-bottom: 0; border-bottom: 0; }
+  .card .card-body { align-items: center; }
+  .card .out { display: flex; flex: 1; align-items: center; min-width: 0; min-height: 3.2em; }
+  .card .out > span { min-width: 0; }
 </style>

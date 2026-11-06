@@ -1,9 +1,10 @@
-name: Deploy
+name: CI
 
 on:
   push:
     branches:
       - master
+  pull_request:
   schedule:
     - cron: "0 10 * * *"
   workflow_dispatch:
@@ -11,12 +12,9 @@ on:
 permissions:
   contents: read
 
-concurrency:
-  group: deploy-workers
-  cancel-in-progress: false
-
 jobs:
-  deploy:
+  check:
+    if: github.event_name == 'push' || github.event_name == 'pull_request'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
@@ -30,20 +28,13 @@ jobs:
 
       - run: npm run check
 
-      - name: Build production site
-        run: npm run build
+  rebuild:
+    if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Trigger Cloudflare Workers Builds deploy hook
         env:
-          BGG_TOKEN: ${{ secrets.BGG_TOKEN }}
-          RA_USER: ${{ secrets.RA_USER }}
-          RA_KEY: ${{ secrets.RA_KEY }}
-          LASTFM_USER: ${{ secrets.LASTFM_USER }}
-          LASTFM_API_KEY: ${{ secrets.LASTFM_API_KEY }}
-          CROSSPOINT_USER: ${{ secrets.CROSSPOINT_USER }}
-          CROSSPOINT_KEY: ${{ secrets.CROSSPOINT_KEY }}
-          CROSSPOINT_URL: ${{ secrets.CROSSPOINT_URL }}
-
-      - name: Deploy static assets to Cloudflare Workers
-        run: npx wrangler deploy
-        env:
-          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          DEPLOY_HOOK_URL: ${{ secrets.CF_DEPLOY_HOOK_URL }}
+        run: |
+          test -n "$DEPLOY_HOOK_URL" || { echo "CF_DEPLOY_HOOK_URL is not set"; exit 1; }
+          curl --fail --silent --show-error -X POST "$DEPLOY_HOOK_URL" > /dev/null

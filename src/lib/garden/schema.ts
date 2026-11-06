@@ -8,22 +8,18 @@ export const placeholder = z.string().regex(/^\[placeholder: [^\]]+\]$/);
 export const subject = z.string().regex(/^[a-z0-9-]+:[^\s]+$/);
 export const colour = z.enum(["red", "green", "yellow", "blue", "none"]);
 export const kind = z.enum(["note", "photo", "link", "milestone", "stat"]);
-export const growth = z.enum(["seedling", "budding", "evergreen"]);
 export const toy = z.enum(["cube-timer", "model-viewer"]);
 
 export const icon = z.string().regex(/^[a-z0-9-]+$/)
   .refine((name) => existsSync(resolve("src/icons", `${name}.svg`)), "no such icon in src/icons");
-
-export const kitItem = z.strictObject({ name: z.string().min(1), why: z.string().optional(), href: z.url().optional() });
 
 export const pursuitSchema = z.strictObject({
   title: z.string().min(1),
   verb: z.string().min(1).optional(),
   icon,
   colour: colour.default("none"),
-  since: z.union([z.number().int().min(1980).max(2100), placeholder]),
+  since: z.number().int().min(1980).max(2100).optional(),
   blurb: z.string().min(1),
-  kit: z.array(kitItem).default([]),
   toy: toy.optional(),
   currently: z.number().int().min(1).optional(),
 });
@@ -40,7 +36,6 @@ export function entrySchema<I extends z.ZodType>(image: I) {
     subject: subject.optional(),
     hidden: z.boolean().default(false),
     sample: z.boolean().default(false),
-    long: z.boolean().default(false),
     dek: z.string().min(1).optional(),
     tags: z.array(z.string().min(1)).default([]),
     connected: z.array(z.string().min(1)).default([]),
@@ -95,6 +90,7 @@ export const shelfGameSchema = z.strictObject({
   plays: z.number().int().min(0),
   rating: z.number().min(0).max(10).optional(),
   href: z.url().optional(),
+  cover: z.string().min(1).optional(),
 });
 
 export const feedOutputSchema = z.object({
@@ -105,7 +101,6 @@ export const feedOutputSchema = z.object({
 export type ImageSource = ImageMetadata | string;
 export type Colour = z.infer<typeof colour>;
 export type Kind = z.infer<typeof kind>;
-export type Growth = z.infer<typeof growth>;
 export type PursuitData = z.output<typeof pursuitSchema>;
 export type Pursuit = PursuitData & { id: string };
 export type EntryData = z.output<ReturnType<typeof entrySchema<z.ZodType<ImageSource>>>>;
@@ -125,7 +120,6 @@ export type GardenEntry = {
   pursuits: string[];
   date: Date;
   lastTouched: Date;
-  growth: Growth;
   long: boolean;
   dek?: string;
   body?: string;

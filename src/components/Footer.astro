@@ -1,18 +1,45 @@
 ---
-import { longDate, ZONE } from "../lib/dates";
+import { yearOf } from "../lib/dates";
 import { buildNow } from "../lib/now";
+import GitHubLogo from "../icons/github-logo.svg";
+import LinkedInLogo from "../icons/linkedin-logo.svg";
+import EnvelopeSimple from "../icons/envelope-simple.svg";
 
-const built = buildNow();
-const date = longDate(built);
-const year = built.toLocaleDateString("en-GB", { year: "numeric", timeZone: ZONE });
+const year = yearOf(buildNow());
 ---
 
-<footer>
-  <p class="elsewhere"><a href="https://github.com/azharkhan">GitHub</a><span class="dot" aria-hidden="true">·</span><a href="https://www.linkedin.com/in/azharkh">LinkedIn</a><span class="dot" aria-hidden="true">·</span><a href="mailto:azhar@hey.com?subject=Sending%20a%20pigeon%2C%20from%20your%20website">Email</a></p>
-  <p class="colophon">Built with <a href="https://astro.build">Astro</a>, set in <a href="https://fonts.google.com/specimen/Fraunces">Fraunces</a> and <a href="https://fonts.google.com/specimen/Source+Serif+4">Source Serif 4</a>, hosted on <a href="https://pages.cloudflare.com">Cloudflare</a>. Last rebuilt <time datetime={built.toISOString()}>{date}</time>. © 2013–{year}.</p>
+<footer class="site-footer">
+  <p class="footer-heading mono">Elsewhere</p>
+  <ul class="social-links">
+    <li><a href="https://github.com/azharkhan"><GitHubLogo class="social-icon" aria-hidden="true" /><span class="social-label">GitHub</span></a></li>
+    <li><a href="https://www.linkedin.com/in/azharkh"><LinkedInLogo class="social-icon" aria-hidden="true" /><span class="social-label">LinkedIn</span></a></li>
+    <li><a href="mailto:azhar@hey.com?subject=Sending%20a%20pigeon%2C%20from%20your%20website"><EnvelopeSimple class="social-icon" aria-hidden="true" /><span class="social-label">Email</span></a></li>
+  </ul>
+  <div class="footer-meta">
+    <p class="footer-copyright"><a class="copyright-link" href="https://github.com/azharkhan/azhar-khan" title="Source code for this site on GitHub" aria-label={`Source code on GitHub. Copyright 2013–${year}`}>© <span class="year-range">2013–{year}</span></a> Azhar Khan</p>
+    <p>Built with <a href="https://astro.build">Astro</a><span aria-hidden="true"> · </span><a href="/privacy/">Privacy</a></p>
+  </div>
 </footer>
 
 <style>
-  .elsewhere { margin: 0 0 1.25rem; }
-  .dot { color: var(--muted); padding: 0 0.55em; }
+  .site-footer { container-type: inline-size; border-top: 1px solid var(--rule); padding-top: 1.25rem; }
+  .footer-heading { color: var(--muted); margin: 0 0 0.55rem; }
+  .social-links { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 0.75rem; list-style: none; margin: 0 0 1.7rem; padding: 0; }
+  .social-links li { min-width: 0; }
+  .social-links a { display: inline-flex; align-items: center; gap: 0.55rem; min-height: 2.5rem; font-size: 0.93em; text-decoration: none; }
+  .social-label { line-height: 1.15; text-decoration: underline; text-decoration-color: var(--dim); text-underline-offset: 0.22em; }
+  .social-icon { display: block; width: 1rem; height: 1rem; flex: none; transform: translateY(-0.05em); }
+  .footer-meta { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 0.4rem 1rem; padding-top: 0.8rem; color: var(--muted); font-family: var(--mono); font-size: 0.68rem; letter-spacing: 0.02em; }
+  .footer-meta p { margin: 0; white-space: nowrap; }
+  .footer-meta a { color: inherit; text-decoration: underline; text-decoration-color: var(--dim); text-underline-offset: 0.2em; }
+  .footer-meta .copyright-link { text-decoration: none; }
+  .footer-meta .year-range { text-decoration: underline; text-decoration-color: var(--dim); text-underline-offset: 0.2em; }
+  .site-footer a:hover, .site-footer a:focus-visible { color: var(--ink); text-decoration-color: var(--coral); }
+  .site-footer a:hover .social-label, .site-footer a:focus-visible .social-label { text-decoration-color: var(--coral); }
+  .site-footer .copyright-link:hover .year-range, .site-footer .copyright-link:focus-visible .year-range { text-decoration-color: var(--coral); }
+  @container (max-width: 31rem) {
+    .social-links { display: flex; flex-wrap: wrap; gap: 0.25rem 1.25rem; margin-bottom: 1rem; }
+    .social-links a { min-height: 2.75rem; }
+    .footer-meta { flex-direction: column; gap: 0.35rem; padding-top: 0.4rem; }
+  }
 </style>

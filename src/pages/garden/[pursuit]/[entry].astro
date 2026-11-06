@@ -40,6 +40,15 @@ const metric = entry.metric ?? statMetric(garden, entry, primary.id);
 const view = metric ? metricView(metric) : undefined;
 const linkHref = entry.url ?? (entry.kind === "link" ? entry.href : undefined);
 const linkLabel = linkHref ? new URL(linkHref).hostname.replace(/^www\./, "") : undefined;
+const SOURCE_LABELS: Record<string, string> = {
+  letterboxd: "Letterboxd",
+  bgg: "BoardGameGeek",
+  hardcover: "Hardcover",
+  retroachievements: "RetroAchievements",
+  listenbrainz: "MusicBrainz",
+};
+const sourceName = entry.sources.map((source) => SOURCE_LABELS[source]).find(Boolean);
+const sourceHref = entry.kind !== "link" && sourceName ? entry.href : undefined;
 const updated = longDate(entry.date) !== longDate(entry.lastTouched);
 const thoughtParagraphs = entry.thought?.split(/\n\s*\n/).filter(Boolean) ?? [];
 ---
@@ -50,9 +59,10 @@ const thoughtParagraphs = entry.thought?.split(/\n\s*\n/).filter(Boolean) ?? [];
       <h1 class="page-title">{entry.title}</h1>
       {entry.dek && <p class="dek">{entry.dek}</p>}
       <p class="meta">
-        <time datetime={entry.date.toISOString()}>{longDate(entry.date)}</time> · {entry.growth}
-        {entry.long && <> · {readMinutes(entry.body ?? "")} min read</>}
+        <time datetime={entry.date.toISOString()}>{longDate(entry.date)}</time>
+        {entry.long && <> · {readMinutes(entry.body ?? entry.thought ?? "")} min read</>}
         {updated && <> · Updated {longDate(entry.lastTouched)}</>}
+        {sourceHref && <> · <a href={sourceHref} referrerpolicy="no-referrer">On {sourceName} ↗</a></>}
       </p>
     </header>
 

@@ -16,7 +16,6 @@ function pursuit(id: string, currentlyAt?: number): Pursuit {
     colour: "none",
     since: 2020,
     blurb: `[placeholder: ${id} blurb]`,
-    kit: [],
     currently: currentlyAt,
   };
 }
@@ -30,7 +29,6 @@ function entry(fields: Partial<GardenEntry> = {}): GardenEntry {
     pursuits: ["films"],
     date: new Date("2026-10-20T12:00:00Z"),
     lastTouched: new Date("2026-10-20T12:00:00Z"),
-    growth: "seedling",
     long: false,
     history: [],
     tags: [],
@@ -38,6 +36,19 @@ function entry(fields: Partial<GardenEntry> = {}): GardenEntry {
     sample: true,
     ...fields,
   };
+}
+
+function boardGame(id: string, title: string, at: Date): GardenEntry {
+  return entry({
+    id: `bgg:${id}`,
+    sources: ["bgg"],
+    title,
+    href: `https://boardgamegeek.com/boardgame/${id}`,
+    pursuits: ["board-games"],
+    date: at,
+    lastTouched: at,
+    history: [{ at, verb: "played" }],
+  });
 }
 
 function garden(fields: Partial<Garden> = {}): Garden {
@@ -62,33 +73,96 @@ describe("Currently queries", () => {
     expect(result[0]).toMatchObject({ state: "latest", metric, entry: { id: "sample/entry" } });
   });
 
-  it("treats exactly 30 days as fresh and 30 days plus one millisecond as stale", () => {
-    const exactlyThirtyDays = new Date(now.getTime() - 30 * 86400000);
-    const oneMillisecondTooOld = new Date(exactlyThirtyDays.getTime() - 1);
-    expect(currently(garden({ entries: [entry({ lastTouched: exactlyThirtyDays })] }))[0]?.state).toBe("latest");
-    expect(currently(garden({ entries: [entry({ lastTouched: oneMillisecondTooOld })] }))[0]?.state).toBe("blurb");
+  it("uses the latest single rather than a newer cubing average", () => {
+    const single = entry({
+      id: "solve/latest-single", kind: "stat", pursuits: ["cubing"],
+      stat: { label: "Single", value: 110, unit: "s" },
+      date: new Date("2026-11-01T12:00:00Z"), lastTouched: new Date("2026-11-01T12:00:00Z"),
+    });
+    const average = entry({
+      id: "solve/newer-average", kind: "stat", pursuits: ["cubing"],
+      stat: { label: "ao5", value: 21.9, unit: "s" }, date: now, lastTouched: now,
+    });
+    const result = currently(garden({ pursuits: [pursuit("cubing", 1)], entries: [single, average] }));
+    expect(result[0]).toMatchObject({ state: "latest", entry: { id: "solve/latest-single" } });
+  });
+
+  it("keeps the latest entry visible regardless of age", () => {
+    const fortyOneDaysAgo = new Date(now.getTime() - 41 * 86400000);
+    const result = currently(garden({ entries: [entry({ lastTouched: fortyOneDaysAgo })] }));
+    expect(result[0]).toMatchObject({ state: "latest", entry: { lastTouched: fortyOneDaysAgo } });
   });
 
   it("returns a blurb when there are no entries", () => {
     expect(currently(garden())[0]).toMatchObject({ state: "blurb", blurb: "[placeholder: films blurb]" });
   });
 
-  it("omits an off feed with no fresh entry but keeps a fresh hand entry", () => {
+  it("shows an old entry even when its feed is off", () => {
+    const fortyOneDaysAgo = new Date(now.getTime() - 41 * 86400000);
     const result = currently(garden({
-      pursuits: [pursuit("films", 1), pursuit("reading", 2)],
-      entries: [entry({ pursuits: ["reading"], lastTouched: now })],
-      feeds: [status({ mode: "off" }), status({ adapter: "sample-reading", pursuit: "reading", mode: "off" })],
+      entries: [entry({ lastTouched: fortyOneDaysAgo })],
+      feeds: [status({ mode: "off" })],
     }));
-    expect(result.map((row) => row.pursuit.id)).toEqual(["reading"]);
-    expect(result[0]?.state).toBe("latest");
+    expect(result[0]).toMatchObject({ state: "latest", entry: { lastTouched: fortyOneDaysAgo } });
   });
 
-  it("omits a failed feed when it has no feed entries", () => {
-    const result = currently(garden({
-      entries: [entry({ lastTouched: new Date("2026-09-01T12:00:00Z") })],
-      feeds: [status({ error: "live failed" })],
-    }));
+  it("omits an off or failed feed when it has no entries", () => {
+    const result = currently(garden({ feeds: [status({ mode: "off", error: "feed off" })] }));
     expect(result).toEqual([]);
+    const failed = currently(garden({ feeds: [status({ error: "live failed" })] }));
+    expect(failed).toEqual([]);
+  });
+
+  it("lists games from the latest Toronto play date, newest first with a title tie-break, capped at three", () => {
+    const at = new Date("2026-10-31T16:00:00Z");
+    const entries = [
+      boardGame("5", "Echo", new Date(at.getTime() - 3 * 60_000)),
+      boardGame("4", "Delta", new Date(at.getTime() - 2 * 60_000)),
+      boardGame("3", "Bravo", new Date(at.getTime() - 60_000)),
+      boardGame("2", "Alpha", new Date(at.getTime() - 60_000)),
+      boardGame("1", "Newest", at),
+      boardGame("old", "Previous day", new Date("2026-10-30T16:00:00Z")),
+    ];
+    const result = currently(garden({
+      pursuits: [pursuit("board-games", 1)],
+      entries,
+    }))[0]!;
+    expect(result.state).toBe("latest");
+    if (result.state !== "latest") return;
+    expect(result.items).toEqual([
+      { title: "Newest", id: "bgg:1", href: "https://boardgamegeek.com/boardgame/1" },
+      { title: "Alpha", id: "bgg:2", href: "https://boardgamegeek.com/boardgame/2" },
+      { title: "Bravo", id: "bgg:3", href: "https://boardgamegeek.com/boardgame/3" },
+    ]);
+    expect(result.entry.title).toBe("Newest");
+    expect(result.detail).toBeUndefined();
+  });
+
+  it("groups 02:00Z with the prior UTC date in Toronto and ignores future plays", () => {
+    const TorontoNow = new Date("2026-09-27T03:00:00Z");
+    const result = currently(garden({
+      now: TorontoNow,
+      pursuits: [pursuit("board-games", 1)],
+      entries: [
+        boardGame("edge", "Toronto Sep 26", new Date("2026-09-27T02:00:00Z")),
+        boardGame("utc-previous", "Previous UTC date", new Date("2026-09-26T23:00:00Z")),
+        boardGame("local-previous", "Previous Toronto date", new Date("2026-09-26T03:30:00Z")),
+        boardGame("future", "Future play", new Date("2026-09-27T03:01:00Z")),
+      ],
+    }))[0]!;
+    expect(result.state).toBe("latest");
+    if (result.state !== "latest") return;
+    expect(result.items?.map((item) => item.title)).toEqual(["Toronto Sep 26", "Previous UTC date"]);
+  });
+
+  it("shows the board-games blurb when BGG is off but a shelf exists", () => {
+    const shelf = [{ id: "1", name: "Sample game", minPlayers: 1, maxPlayers: 4, minutes: 30, plays: 0 }];
+    const off = status({ adapter: "bgg", pursuit: "board-games", mode: "off" });
+    const pursuits = [pursuit("board-games", 1)];
+    expect(currently(garden({ pursuits, feeds: [off], shelf })).map((row) => row.state)).toEqual(["blurb"]);
+    expect(currently(garden({ pursuits, feeds: [status({ adapter: "bgg", pursuit: "board-games", error: "live failed" })], shelf }))
+      .map((row) => row.state)).toEqual(["blurb"]);
+    expect(currently(garden({ pursuits, feeds: [off] }))).toEqual([]);
   });
 
   it("shows one shared entry in each Currently pursuit", () => {
@@ -96,7 +170,7 @@ describe("Currently queries", () => {
       pursuits: [pursuit("films", 1), pursuit("reading", 2)],
       entries: [entry({ pursuits: ["films", "reading"], lastTouched: now })],
     }));
-    expect(result.map((row) => row.entry?.id)).toEqual(["sample/entry", "sample/entry"]);
+    expect(result.map((row) => row.state === "latest" ? row.entry.id : undefined)).toEqual(["sample/entry", "sample/entry"]);
   });
 
   it("derives stat metrics with a change and without one for the first point", () => {
@@ -105,12 +179,6 @@ describe("Currently queries", () => {
     const gardenValue = garden({ pursuits: [pursuit("cubing", 1)], entries: [first, latest] });
     expect(statMetric(gardenValue, first, "cubing")).toEqual({ kind: "stat", label: "ao5", value: 22.8, unit: "s", change: undefined });
     expect(statMetric(gardenValue, latest, "cubing")).toEqual({ kind: "stat", label: "ao5", value: 21.9, unit: "s", change: -0.9 });
-  });
-
-  it("lets opts.now override garden.now", () => {
-    const result = garden({ entries: [entry({ lastTouched: new Date("2026-10-20T12:00:00Z") })] });
-    expect(currently(result)[0]?.state).toBe("latest");
-    expect(currently(result, { now: new Date("2026-12-01T12:00:00Z") })[0]?.state).toBe("blurb");
   });
 
   it("returns stat series only at the minimum and orders points by date", () => {
@@ -155,11 +223,11 @@ describe("fixture adapter integration", () => {
       pursuit("3d-printing"),
       pursuit("fitness"),
     ];
-    const feeds = await runFeeds(adapters, { env: {}, dev: true, now, fetch });
+    const feeds = await runFeeds(adapters, { env: { FEEDS: "fixtures" }, dev: true, now, fetch });
     const result = buildGarden({ pursuits, hand: [], feeds, now, samples: true });
-    const rows = currently(result, { now: new Date("2026-11-02T17:00:00Z") });
+    const rows = currently(result);
     expect(rows.map((row) => [row.pursuit.id, row.state])).toEqual([
-      ["films", "blurb"],
+      ["films", "latest"],
       ["board-games", "latest"],
       ["reading", "latest"],
       ["gaming", "latest"],
@@ -169,16 +237,16 @@ describe("fixture adapter integration", () => {
     expect(result.entries.find((entry) => entry.subject === "letterboxd:project-hail-mary")?.metric)
       .toEqual({ kind: "stars", value: 4.5 });
     expect(result.entries.find((entry) => entry.subject === "retroachievements:1")?.title).toBe("Super Metroid");
-    expect(result.entries.find((entry) => entry.subject === "crosspoint:reading/0123456789abcdef0123456789abcdef")?.metric)
+    expect(result.entries.find((entry) => entry.subject === "hardcover:710001")?.metric)
       .toEqual({ kind: "progress", value: 43 });
-    expect(result.entries.find((entry) => entry.subject === "lastfm:sample-artist/sample-album")?.metric)
-      .toEqual({ kind: "count", value: 31, unit: "plays" });
+    expect(result.entries.find((entry) => entry.subject === "listenbrainz:artist:dddddddd-dddd-4ddd-8ddd-dddddddddddd")?.metric)
+      .toBeUndefined();
     expect(rows.map((row) => row.state === "latest" ? row.metric : undefined)).toEqual([
-      undefined,
+      { kind: "stars", value: 4.5 },
       { kind: "times", value: 2 },
       { kind: "progress", value: 43 },
       { kind: "count", value: 4, unit: "new" },
-      { kind: "count", value: 31, unit: "plays" },
+      undefined,
       undefined,
     ]);
   });

@@ -1,18 +1,18 @@
 ---
 import type { LedgerRow } from "../lib/home/ledger";
+import Inline from "./Inline.astro";
 
 interface Props {
   rows: LedgerRow[];
-  updated: string;
 }
 
-const { rows, updated } = Astro.props;
+const { rows } = Astro.props;
 const icons = import.meta.glob("../icons/*.svg", { eager: true, import: "default" }) as Record<string, typeof import("../icons/cube.svg").default>;
 ---
 
 {rows.length > 0 && (
   <>
-    <h2 class="label">Currently</h2>
+    <h2 class="label">Lately</h2>
     <ol class="log">
       {rows.map((row) => {
         const Icon = icons[`../icons/${row.icon}.svg`];
@@ -21,13 +21,20 @@ const icons = import.meta.glob("../icons/*.svg", { eager: true, import: "default
           <li data-key={row.key}>
             <span class:list={["k", row.colour !== "none" && `c-${row.colour}`]}><Icon class="ico" aria-hidden="true" />{row.label}</span>
             <span class="v">
-              {row.title !== undefined ? (
+              {row.items ? (
+                row.items.map((item, index) => (
+                  <span>{index > 0 ? ", " : ""}{item.href
+                    ? <a href={item.href} target="_blank" rel="noopener noreferrer">{row.italic ? <i>{item.title}</i> : item.title}</a>
+                    : row.italic ? <i>{item.title}</i> : item.title}</span>
+                ))
+              ) : row.title !== undefined ? (
                 row.href ? (
-                  <a href={row.href}>{row.italic ? <i>{row.title}</i> : row.title}</a>
+                  <a href={row.href} target={row.external ? "_blank" : undefined} rel={row.external ? "noopener noreferrer" : undefined}>{row.italic ? <i>{row.title}</i> : row.title}</a>
                 ) : row.italic ? <i>{row.title}</i> : row.title
               ) : (
-                <span class="blurb">{row.blurb}</span>
+                <span class="blurb"><Inline text={row.blurb ?? ""} /></span>
               )}
+              {row.detail && <span class="detail"> · {row.detail}</span>}
             </span>
             {row.metric && (
               <span class="m">
@@ -40,7 +47,7 @@ const icons = import.meta.glob("../icons/*.svg", { eager: true, import: "default
                 ) : row.metric.kind === "progress" ? (
                   <><span class="ribbon" aria-hidden="true"><i style={`width:${row.metric.value}%`}></i></span>{row.metric.text}</>
                 ) : row.metric.kind === "stat" ? (
-                  <>{row.metric.text}{row.metric.change && <span class="delta">{row.metric.change}</span>}</>
+                  <>{row.metric.text}{row.metric.change && <span class:list={["delta", row.metric.change.startsWith("↓") && "improved"]}>{row.metric.change}</span>}</>
                 ) : row.metric.text}
               </span>
             )}
@@ -54,7 +61,6 @@ const icons = import.meta.glob("../icons/*.svg", { eager: true, import: "default
         );
       })}
     </ol>
-    <p class="meta">This week. Updated {updated}.</p>
   </>
 )}
 
@@ -89,9 +95,11 @@ const icons = import.meta.glob("../icons/*.svg", { eager: true, import: "default
   .log .k { display: inline-flex; align-items: center; gap: 0.4rem; font-family: var(--mono); font-size: 0.62rem; letter-spacing: 0.09em; text-transform: uppercase; color: var(--muted); transition: color 160ms; }
   .log .k .ico { width: 0.95rem; height: 0.95rem; color: var(--c); }
   .log .v { min-width: 0; }
+  .log .detail { color: var(--muted); font-size: 0.85em; }
   .log .m { display: inline-flex; align-items: center; gap: 0.3rem; font-family: var(--mono); font-size: 0.7rem; color: var(--muted); white-space: nowrap; font-variant-numeric: tabular-nums; }
   .log .blurb { color: var(--muted); font-style: italic; }
   .log .delta { color: var(--muted); }
+  .log .delta.improved { color: var(--p-green); }
   .log li.lit { background: var(--wash); }
   .log li.lit .k { color: var(--ink); }
 
@@ -110,7 +118,10 @@ const icons = import.meta.glob("../icons/*.svg", { eager: true, import: "default
   .stub::after { bottom: -7px; border-bottom-color: transparent; }
   .stub-main { padding: 0.6rem 0.8rem 0.7rem; font-size: 0.9em; line-height: 1.45; }
   .stub-main .k { display: block; font-family: var(--mono); font-size: 0.58rem; letter-spacing: 0.12em; text-transform: uppercase; color: var(--coral-ink); margin-bottom: 0.2rem; }
-  .stub-main p { margin: 0.3rem 0 0; font-style: italic; color: var(--muted); }
+  .stub-main p {
+    display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 4; line-clamp: 4; overflow: hidden;
+    margin: 0.3rem 0 0; font-style: italic; color: var(--muted);
+  }
   .stub-tear {
     border-left: 2px dashed var(--rule); display: flex; align-items: center; justify-content: center;
     font-family: var(--mono); font-size: 0.58rem; letter-spacing: 0.12em; text-transform: uppercase; color: var(--muted);
@@ -120,8 +131,11 @@ const icons = import.meta.glob("../icons/*.svg", { eager: true, import: "default
 
   .ribbon { display: inline-block; width: 2.5rem; height: 3px; background: var(--rule); border-radius: 2px; overflow: hidden; }
   .ribbon i { display: block; height: 100%; background: var(--p-yellow); }
+  @media (max-width: 24rem) {
+    .log li[data-key="cubing"] { grid-template-columns: 5.4rem minmax(0, 1fr); }
+    .log li[data-key="cubing"] .m { grid-column: 2; justify-self: end; }
+  }
   @media (prefers-reduced-motion: reduce) { .stub { animation: none; } }
 
-  :global(.current) .meta { margin: 0 0 1.5rem; }
   :global(.current) .label { margin-top: 0.35rem; }
 </style>

@@ -3,7 +3,7 @@ import { existsSync } from "node:fs";
 import { readdir, readFile } from "node:fs/promises";
 import { relative, resolve, sep } from "node:path";
 import { chromium } from "playwright-core";
-import { buildFixtures, pinClock, seedRandom, serve } from "./lib.mjs";
+import { buildFixtures, FIXTURE_DIST, pinClock, seedRandom, serve } from "./lib.mjs";
 
 const chromePath = process.env.CHROME_PATH || "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome";
 if (!existsSync(chromePath)) throw new Error(`Chrome not found at ${chromePath}; set CHROME_PATH`);
@@ -20,11 +20,11 @@ async function filesUnder(directory) {
 
 function targetFile(href) {
   const pathname = decodeURI(href.split(/[?#]/, 1)[0] || "/");
-  return resolve("dist", `.${pathname}${pathname.endsWith("/") ? "index.html" : ""}`);
+  return resolve(FIXTURE_DIST, `.${pathname}${pathname.endsWith("/") ? "index.html" : ""}`);
 }
 
 buildFixtures();
-const server = await serve(resolve("dist"));
+const server = await serve(resolve(FIXTURE_DIST));
 const browser = await chromium.launch({ executablePath: chromePath });
 const outsideRequests = [];
 const failures = [];
@@ -66,14 +66,14 @@ async function check(name, action) {
   }
 }
 
-const allFiles = await filesUnder(resolve("dist"));
-const gardenFiles = await filesUnder(resolve("dist/garden"));
+const allFiles = await filesUnder(resolve(FIXTURE_DIST));
+const gardenFiles = await filesUnder(resolve(FIXTURE_DIST, "garden"));
 const entryPages = gardenFiles.filter((file) => {
-  const path = relative(resolve("dist/garden"), file).split(sep);
+  const path = relative(resolve(FIXTURE_DIST, "garden"), file).split(sep);
   return path.length === 3 && path.at(-1) === "index.html";
 });
 const pursuitPages = gardenFiles.filter((file) => {
-  const path = relative(resolve("dist/garden"), file).split(sep);
+  const path = relative(resolve(FIXTURE_DIST, "garden"), file).split(sep);
   return path.length === 2 && path.at(-1) === "index.html";
 });
 const entryPage = "/garden/board-games/sample-long-form/";
@@ -84,7 +84,7 @@ try {
       const html = await readFile(file, "utf8");
       for (const match of html.matchAll(/\b(?:href|src)=["'](\/[^"]*?)["']/gi)) {
         const target = targetFile(match[1]);
-        assert.ok(existsSync(target), `${relative(resolve("dist"), file)} references missing ${match[1]}`);
+        assert.ok(existsSync(target), `${relative(resolve(FIXTURE_DIST), file)} references missing ${match[1]}`);
       }
     }
   });
@@ -94,10 +94,9 @@ try {
       const { context, page } = await pageFor(path);
       try {
         const links = page.locator(".nav a");
-        assert.deepEqual((await links.allTextContents()).map((text) => text.trim()), ["Garden", "Uses"]);
+        assert.deepEqual((await links.allTextContents()).map((text) => text.trim()), ["Uses"]);
         assert.ok(await page.locator("[data-lights]").count() > 0);
-        if (path === "/garden/") assert.equal(await links.nth(0).getAttribute("aria-current"), "page");
-        if (path === "/uses/") assert.equal(await links.nth(1).getAttribute("aria-current"), "page");
+        if (path === "/uses/") assert.equal(await links.nth(0).getAttribute("aria-current"), "page");
       } finally {
         await context.close();
       }
@@ -107,18 +106,41 @@ try {
   await check("uses", async () => {
     const { context, page } = await pageFor("/uses/");
     try {
-      assert.deepEqual(await page.locator(".uses-section h2").allTextContents(), ["Tools", "Desk", "Devices", "Likes"]);
-      assert.ok(await page.locator(".uses-section .uses-list > li").count() >= 4);
-      assert.equal(await page.getByText("X4 + CrossPoint", { exact: true }).count(), 1);
-      assert.equal((await page.locator(".uses-kit > h2").textContent())?.trim(), "Kit");
-      const kitLinks = page.locator(".uses-kit-pursuit h3 a");
-      assert.ok(await kitLinks.count() > 0);
-      for (const link of await kitLinks.all()) {
-        const href = await link.getAttribute("href");
-        assert.ok(href && existsSync(targetFile(href)), `kit pursuit target does not exist: ${href}`);
-      }
+      const headings = await page.locator(".uses-content h2").allTextContents();
+      assert.ok(headings.length >= 3, JSON.stringify(headings));
+      for (const heading of ["Cubing", "3D printing"]) assert.ok(headings.includes(heading), JSON.stringify(headings));
+      assert.ok(await page.locator(".uses-content ul > li").count() >= 6);
+      const links = await page.locator(".uses-content a").evaluateAll((anchors) => anchors.map((link) => ({
+        text: link.textContent?.trim(),
+        href: link.getAttribute("href"),
+      })));
+      for (const expected of [
+        { text: "MoYu RS3M V5 Ball Core", href: "https://www.thecubicle.com/en-ca/products/moyu-rs3-m-v5-3x3-ball-core-uv-robot-cube-stand" },
+        { text: "Bambu Lab A1 Combo", href: "https://bambulab.com/en/a1" },
+      ]) assert.ok(links.some((link) => link.text === expected.text && link.href === expected.href), JSON.stringify(expected));
     } finally {
       await context.close();
+    }
+  });
+
+  await check("privacy-page", async () => {
+    const response = await fetch(`${server.origin}/privacy/`);
+    assert.equal(response.status, 200);
+    const html = await response.text();
+    assert.match(html, /<h1\b[^>]*>Privacy<\/h1>/i);
+    assert.match(html, /id="takedowns"/);
+    assert.match(html, /<a href="mailto:azhar@hey\.com">azhar@hey\.com<\/a>/i);
+  });
+
+  await check("privacy-footer", async () => {
+    for (const path of ["/", "/garden/"]) {
+      const { context, page } = await pageFor(path);
+      try {
+        assert.equal(await page.locator('.footer-meta a[href="/privacy/"]').count(), 1);
+        assert.equal(await page.locator('.copyright-link[href="https://github.com/azharkhan/azhar-khan"]').count(), 1);
+      } finally {
+        await context.close();
+      }
     }
   });
 
@@ -131,11 +153,10 @@ try {
       for (let index = 1; index < touched.length; index++) {
         assert.ok(Date.parse(touched[index - 1]) >= Date.parse(touched[index]), "cards are sorted by last touched");
       }
-      const growth = await page.locator(".card-growth").allTextContents();
-      assert.ok(growth.length > 0);
-      assert.ok(growth.every((label) => ["seedling", "budding", "evergreen"].includes(label.trim())));
       const variants = await page.locator(".card").evaluateAll((elements) => [...new Set(elements.map((element) => element.getAttribute("data-variant")))].sort());
       assert.deepEqual(variants, ["cover", "still", "text"]);
+      assert.ok(await page.locator(".card-context").count() > 0, "feed cards show context lines");
+      assert.equal(await page.locator(".card-context + .card-metric").count(), 0, "context replaces the separate metric line");
     } finally {
       await context.close();
     }
@@ -177,7 +198,9 @@ try {
       assert.equal(await chart.count(), 1);
       assert.equal(await chart.locator("svg circle").count(), 3);
       assert.equal(await chart.locator("table.sr-only tbody tr").count(), 3);
-      assert.equal(await cubingPage.locator(".toc li").count(), 3);
+      assert.ok(await cubingPage.locator(".toc li").count() >= 5);
+      assert.ok(await cubingPage.locator('.toc a[href="/garden/cubing/first-solve/"]').count());
+      assert.match(await cubingPage.locator(".toc li").filter({ hasText: "Single" }).textContent(), /1:58/);
     } finally {
       await cubingContext.close();
     }
@@ -190,7 +213,7 @@ try {
   });
 
   await check("entry-history", async () => {
-    const { context, page } = await pageFor("/garden/board-games/224517/");
+    const { context, page } = await pageFor("/garden/music/album-bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb/");
     try {
       const rows = page.locator(".entry-history .toc > li");
       assert.ok(await rows.count() > 0);
@@ -204,7 +227,7 @@ try {
   });
 
   await check("music-entry-width", async () => {
-    const { context, page } = await pageFor("/garden/music/sample-artist-sample-album/", { viewport: { width: 390, height: 844 } });
+    const { context, page } = await pageFor("/garden/music/album-bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb/", { viewport: { width: 390, height: 844 } });
     try {
       assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth), "music entry does not scroll horizontally at 390px");
     } finally {
@@ -231,9 +254,9 @@ try {
       assert.ok(target && await page.locator(target).count() > 0, "footnote backref target resolves");
       const endMarkWidth = await page.locator(".longform .prose > p:last-of-type").evaluate((element) => Number.parseFloat(getComputedStyle(element, "::after").width));
       assert.ok(endMarkWidth > 0);
+      assert.equal(await page.locator("article.page-prose.longform").count(), 1, "sample long-form entry is auto-detected");
       const meta = await page.locator(".meta").textContent();
       assert.ok(meta?.includes("min read"));
-      assert.ok(meta?.includes("evergreen"));
       assert.ok(meta?.includes("24 October 2026"), "long-form meta shows its frontmatter date");
       const connected = page.locator(".connected");
       assert.equal(await connected.locator("h2").textContent(), "Connected to");

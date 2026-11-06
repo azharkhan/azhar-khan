@@ -2,6 +2,7 @@ import { getCollection } from "astro:content";
 import { loadEnv } from "../env";
 import { buildNow } from "../now";
 import { adapters } from "../feeds";
+import { loadBggShelf } from "../feeds/bgg-shelf";
 import { includeSamples } from "./policy";
 import { runFeeds } from "./feeds";
 import { buildGarden, type Garden } from "./build";
@@ -23,7 +24,8 @@ async function load(): Promise<Garden> {
     body: entry.body,
     data: entry.data as HandEntry["data"],
   }));
-  const feeds = await runFeeds(adapters, { env, dev, now, timeoutMs: 30000 });
+  const bggShelf = await loadBggShelf();
+  const feeds = await runFeeds(adapters, { env, dev, now, timeoutMs: 30000, bggShelf });
   return buildGarden({ pursuits, hand, feeds, now, samples: includeSamples({ env, dev }) });
 }
 

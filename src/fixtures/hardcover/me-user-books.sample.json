@@ -1,0 +1,93 @@
+{
+  "sample": true,
+  "response": {
+    "data": {
+      "me": {
+        "account_privacy_setting_id": 1,
+        "activity_privacy_settings_id": 1,
+        "user_books": [
+          {
+            "status_id": 2,
+            "privacy_setting_id": 1,
+            "date_added": "2026-10-19",
+            "updated_at": "2026-11-01",
+            "book": {
+              "id": 710001,
+              "title": "Foundryside",
+              "pages": 320,
+              "image": { "url": "https://covers.example.test/sample-foundryside.jpg" }
+            },
+            "edition": { "pages": 320 },
+            "user_book_reads": [
+              { "started_at": "2026-10-20", "finished_at": null, "progress_pages": 129, "edition": { "pages": 300 } }
+            ]
+          },
+          {
+            "status_id": 3,
+            "privacy_setting_id": 1,
+            "date_added": "2026-08-30",
+            "updated_at": "2026-09-20",
+            "book": {
+              "id": 710002,
+              "title": "Sample Finished Book",
+              "pages": 288,
+              "image": { "url": "https://covers.example.test/sample-finished-book.jpg" }
+            },
+            "edition": { "pages": 288 },
+            "user_book_reads": [
+              { "started_at": "2026-09-01", "finished_at": "2026-09-20", "progress_pages": 288, "edition": { "pages": 288 } }
+            ]
+          },
+          {
+            "status_id": 2,
+            "privacy_setting_id": 1,
+            "date_added": "2026-10-25",
+            "updated_at": "2026-11-01",
+            "book": {
+              "id": 710003,
+              "title": "Sample Book Without Page Counts",
+              "pages": null,
+              "image": { "url": "https://covers.example.test/sample-no-pages.jpg" }
+            },
+            "edition": { "pages": null },
+            "user_book_reads": [
+              { "started_at": "2026-10-25", "finished_at": null, "progress_pages": 80, "edition": null }
+            ]
+          },
+          {
+            "status_id": 2,
+            "privacy_setting_id": 1,
+            "date_added": "2026-10-30",
+            "updated_at": "2026-11-01",
+            "book": {
+              "id": 710004,
+              "title": null,
+              "pages": 200,
+              "image": { "url": "https://covers.example.test/sample-null-title.jpg" }
+            },
+            "edition": { "pages": 200 },
+            "user_book_reads": [
+              { "started_at": "2026-10-30", "finished_at": null, "progress_pages": 20, "edition": null }
+            ]
+          },
+          {
+            "status_id": 2,
+            "privacy_setting_id": 3,
+            "date_added": "2026-10-30",
+            "updated_at": "2026-11-01",
+            "book": {
+              "id": 710005,
+              "title": "Sample Private Book",
+              "pages": 200,
+              "image": { "url": "https://covers.example.test/sample-private-book.jpg" }
+            },
+            "edition": { "pages": 200 },
+            "user_book_reads": [
+              { "started_at": "2026-10-30", "finished_at": null, "progress_pages": 20, "edition": null }
+            ]
+          }
+        ]
+      }
+    }
+  }
+}

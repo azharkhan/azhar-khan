@@ -1,5 +1,7 @@
 export type Get = { fetch: typeof fetch; signal: AbortSignal };
 
+const userAgent = "azharkhan.net/0.0.0 (https://azharkhan.net)";
+
 function safeUrl(url: string): string {
   const parsed = new URL(url);
   return `${parsed.origin}${parsed.pathname}`;
@@ -12,7 +14,13 @@ export function httpError(status: number, url: string): Error {
 export async function getText(ctx: Get, url: string, init: RequestInit = {}): Promise<{ status: number; body: string }> {
   let response: Response;
   try {
-    response = await ctx.fetch(url, { ...init, signal: ctx.signal });
+    const requestInit = { ...init, signal: ctx.signal };
+    const headers = new Headers(init.headers);
+    if (!headers.has("User-Agent")) {
+      headers.set("User-Agent", userAgent);
+      requestInit.headers = headers;
+    }
+    response = await ctx.fetch(url, requestInit);
   } catch {
     throw new Error(`request failed for ${safeUrl(url)}`);
   }

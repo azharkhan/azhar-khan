@@ -2,6 +2,7 @@
 import { dayMonth, yearOf } from "../lib/dates";
 import { chartModel } from "../lib/garden/chart";
 import type { StatSeries } from "../lib/garden/query";
+import { formatStatValue } from "../lib/garden/stats";
 
 interface Props {
   series: StatSeries;
@@ -11,7 +12,7 @@ const { series } = Astro.props;
 const model = chartModel(series);
 const first = model.points[0]!;
 const last = model.points.at(-1)!;
-const withUnit = (value: number) => `${value}${series.unit ?? ""}`;
+const withUnit = (value: number) => formatStatValue(value, series.unit);
 const label = `${series.label}: ${withUnit(first.value)} to ${withUnit(last.value)} over ${model.points.length} entries`;
 const dateLabel = (date: Date) => `${dayMonth(date)} ${yearOf(date)}`;
 ---

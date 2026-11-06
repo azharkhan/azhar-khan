@@ -3,10 +3,10 @@ import { mkdir, readdir, rename, rm } from "node:fs/promises";
 import { join, resolve } from "node:path";
 import { execFileSync } from "node:child_process";
 import { chromium } from "playwright-core";
-import { buildFixtures, mockupFonts, pinClock, seedRandom, SEED, serve } from "./lib.mjs";
+import { buildFixtures, FIXTURE_DIST, mockupFonts, pinClock, seedRandom, SEED, serve } from "./lib.mjs";
 
 const mockupMode = process.argv.includes("--mockup");
-const root = resolve(mockupMode ? "private/mockups" : "dist");
+const root = resolve(mockupMode ? "private/mockups" : FIXTURE_DIST);
 const out = resolve("build/shots");
 const destination = mockupMode ? join(out, "mockup") : out;
 const chrome = process.env.CHROME_PATH || "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome";

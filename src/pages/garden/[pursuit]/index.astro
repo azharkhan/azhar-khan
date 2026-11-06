@@ -1,6 +1,6 @@
 ---
 import Page from "../../../layouts/Page.astro";
-import Kit from "../../../components/Kit.astro";
+import Inline from "../../../components/Inline.astro";
 import StatChart from "../../../components/StatChart.astro";
 import Timeline from "../../../components/Timeline.astro";
 import Toy from "../../../components/Toy.astro";
@@ -24,12 +24,11 @@ const charts = statSeries(garden, pursuit.id);
 
 <Page title={pursuit.title} current="true">
   <h1 class="page-title">{pursuit.title}</h1>
-  <p class="entry-meta">Since {pursuit.since}</p>
-  <p class="pursuit-blurb">{pursuit.blurb}</p>
+  {pursuit.since && <p class="entry-meta">Since {pursuit.since}</p>}
+  <p class="pursuit-blurb"><Inline text={pursuit.blurb} /></p>
   <Toy toy={pursuit.toy} />
   {charts.map((series) => <StatChart series={series} />)}
   <Timeline entries={entries} paths={paths} />
-  <Kit items={pursuit.kit} />
   <nav class="pursuit-nav" aria-label="Pursuit">
     <a href={GARDEN}>← Garden</a>
   </nav>

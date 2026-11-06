@@ -41,11 +41,11 @@
 .card-title { font-family: var(--display); font-size: 1.18rem; font-weight: 600; line-height: 1.15; margin: 0 0 0.45rem; }
 .card-title a { text-decoration: none; }
 .card-title a::after { content: ""; position: absolute; inset: 0; }
-.card-metric { position: relative; z-index: 1; color: var(--muted); font-family: var(--mono); font-size: 0.78rem; margin: 0 0 0.5rem; }
+.card-context, .card-metric { position: relative; z-index: 1; color: var(--muted); font-family: var(--mono); font-size: 0.72rem; margin: 0 0 0.5rem; }
+.card-metric { font-size: 0.78rem; }
 .card-metric .stars { color: var(--coral); }
 .card-change { padding-left: 0.5rem; }
 .card-excerpt { margin: 0 0 0.65rem; font-size: 0.92em; line-height: 1.45; }
-.card-growth { color: var(--muted); font-size: 0.58rem; margin: 0; }
 .photo-print { margin: 0 0 0.85rem; }
 .photo-print img {
   display: block; box-sizing: border-box; width: 100%; height: auto; border-radius: 1px;
@@ -88,18 +88,6 @@
 .chart path { fill: none; stroke: var(--ink); stroke-width: 2; vector-effect: non-scaling-stroke; }
 .chart circle { fill: var(--coral); stroke: var(--paper); stroke-width: 1; vector-effect: non-scaling-stroke; }
 .chart-dates { margin-top: 0.25rem; }
-.kit ul { margin: 0; padding-left: 1.25rem; }
-.kit li { margin: 0 0 0.45rem; }
-.kit-why { color: var(--muted); }
-.uses-list { margin-bottom: 0; }
-.uses-list li { margin-bottom: 0.65em; }
-.uses-name { font-weight: 600; }
-.uses-why { color: var(--muted); }
-.uses-kit-pursuit { margin-top: 1.5rem; }
-.uses-kit-pursuit h3 {
-  font-family: var(--display); font-size: 1.1rem; font-weight: 600; line-height: 1.2;
-  margin: 0 0 0.45rem; font-variation-settings: "opsz" 24, "SOFT" 100, "WONK" 1;
-}
 .pursuit-nav { border-top: 1px solid var(--rule); margin-top: 3rem; padding-top: 1rem; }
 
 @media (max-width: 40rem) {

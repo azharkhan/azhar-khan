@@ -1,6 +1,8 @@
 import type { CurrentlyRow } from "../garden/query";
 import type { Colour, GardenEntry, Metric } from "../garden/schema";
+import { formatDuration, formatStatValue } from "../garden/stats";
 import { shortDate } from "../dates";
+import { pursuitPath } from "../garden/routes";
 
 export type MetricView =
   | { kind: "stars"; text: string; label: string }
@@ -15,6 +17,9 @@ export type LedgerRow = {
   colour: Colour;
   title?: string;
   href?: string;
+  external?: boolean;
+  items?: { title: string; href?: string }[];
+  detail?: string;
   italic: boolean;
   blurb?: string;
   metric?: MetricView;
@@ -34,13 +39,13 @@ export function metricView(metric: Metric): MetricView {
     case "times":
       return { kind: "text", text: `×${metric.value}` };
     case "count":
-      return { kind: "text", text: `${metric.value} ${metric.unit}` };
+      return { kind: "text", text: metric.unit.startsWith("/") ? `${metric.value}${metric.unit}` : `${metric.value} ${metric.unit}` };
     case "progress": {
       const value = Math.max(0, Math.min(100, Math.round(metric.value)));
       return { kind: "progress", value, text: `${value}%` };
     }
     case "stat": {
-      const result: MetricView = { kind: "stat", text: `${metric.label} ${metric.value}${metric.unit ?? ""}` };
+      const result: MetricView = { kind: "stat", text: `${metric.label} ${formatStatValue(metric.value, metric.unit)}` };
       if (metric.change !== undefined) {
         const change = metric.change < 0
           ? `−${Math.abs(metric.change)}`
@@ -67,24 +72,55 @@ export function reviewLine(entry: GardenEntry): { line: string; at: Date } | und
 
 export function ledgerRow(row: CurrentlyRow): LedgerRow {
   const key = row.pursuit.id;
+  const latestEvent = row.state === "latest"
+    ? row.entry.history.reduce<typeof row.entry.history[number] | undefined>((latest, candidate) =>
+      !latest || candidate.at.getTime() >= latest.at.getTime() ? candidate : latest, undefined)
+    : undefined;
+  const label = row.state === "blurb"
+    ? row.pursuit.verb ?? row.pursuit.title
+    : key === "cubing" && row.entry.kind === "stat"
+      ? "Solving"
+      : row.pursuit.verb ?? row.pursuit.title;
   const base = {
     key,
-    label: row.state === "blurb" ? row.pursuit.title : row.pursuit.verb ?? row.pursuit.title,
+    label,
     icon: row.pursuit.icon,
     colour: row.pursuit.colour,
     italic: ITALIC_PURSUITS.has(key),
   };
   if (row.state === "blurb") return { ...base, blurb: row.blurb };
 
-  const metric = row.metric ? metricView(row.metric) : undefined;
+  const currentSolve = key === "cubing" && row.entry.kind === "stat" ? row.entry.stat : undefined;
+  const currentSolveMetric: MetricView | undefined = currentSolve && row.metric?.kind === "stat"
+    ? {
+      kind: "stat",
+      text: formatStatValue(currentSolve.value, currentSolve.unit),
+      ...(row.metric.change !== undefined ? {
+        change: `${row.metric.change < 0 ? "↓" : row.metric.change > 0 ? "↑" : "→"}${row.metric.unit === "s" ? formatDuration(Math.abs(row.metric.change)) : formatStatValue(Math.abs(row.metric.change), row.metric.unit)}`,
+      } : {}),
+    }
+    : undefined;
+  const metric = key === "board-games"
+    ? undefined
+    : currentSolve ? currentSolveMetric : row.metric ? metricView(row.metric) : undefined;
   const review = row.metric?.kind === "stars" ? reviewLine(row.entry) : undefined;
   const stub = review
     ? { title: row.entry.title, line: review.line, date: shortDate(review.at), iso: review.at.toISOString() }
     : undefined;
   return {
     ...base,
-    title: row.entry.title,
-    href: row.entry.href ?? row.entry.url,
+    ...(row.items
+      ? { items: row.items.map((item) => ({ title: item.title.trim(), href: item.href })) }
+      : {
+        title: currentSolve ? "3×3 Rubik’s Cube" : row.entry.title,
+        href: row.entry.href ?? pursuitPath(key),
+        external: row.entry.href !== undefined,
+      }),
+    detail: currentSolve
+      ? undefined
+      : row.detail ?? (key === "music" && (latestEvent?.verb === "top track" || latestEvent?.verb === "top album")
+        ? latestEvent.text
+        : undefined),
     metric,
     stub,
   };

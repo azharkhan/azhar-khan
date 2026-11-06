@@ -17,7 +17,7 @@ const entryBase = {
 
 describe("pursuitSchema", () => {
   it("applies defaults", () => {
-    expect(pursuitSchema.parse(pursuit)).toMatchObject({ colour: "none", kit: [] });
+    expect(pursuitSchema.parse(pursuit)).toMatchObject({ colour: "none" });
   });
 
   it("rejects a bad colour", () => {
@@ -33,8 +33,10 @@ describe("pursuitSchema", () => {
     expect(pursuitSchema.safeParse({ ...pursuit, icon: "not-an-icon" }).success).toBe(false);
   });
 
-  it("accepts placeholder years but not a year string", () => {
-    expect(pursuitSchema.safeParse({ ...pursuit, since: "[placeholder: year]" }).success).toBe(true);
+  it("makes since an optional numeric year", () => {
+    const { since: _since, ...withoutSince } = pursuit;
+    expect(pursuitSchema.safeParse(withoutSince).success).toBe(true);
+    expect(pursuitSchema.safeParse({ ...pursuit, since: 2019 }).success).toBe(true);
     expect(pursuitSchema.safeParse({ ...pursuit, since: "2019" }).success).toBe(false);
   });
 
@@ -61,6 +63,10 @@ describe("entrySchema", () => {
   it("accepts a dek and rejects an empty one", () => {
     expect(schema.safeParse({ ...entryBase, kind: "note", dek: "[placeholder: dek]" }).success).toBe(true);
     expect(schema.safeParse({ ...entryBase, kind: "note", dek: "" }).success).toBe(false);
+  });
+
+  it("rejects a long-form frontmatter flag", () => {
+    expect(schema.safeParse({ ...entryBase, kind: "note", long: true }).success).toBe(false);
   });
 
   it("requires a stat value", () => {

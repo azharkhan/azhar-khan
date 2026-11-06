@@ -6,6 +6,47 @@
     { "Date": "2026-10-31 21:36:00", "GameID": 1, "GameTitle": "Super Metroid", "GameIcon": "/Images/000001.png", "ConsoleName": "Super Nintendo", "Title": "Sample achievement three" },
     { "Date": "2026-11-01 22:48:00", "GameID": 1, "GameTitle": "Super Metroid", "GameIcon": "/Images/000001.png", "ConsoleName": "Super Nintendo", "Title": "Sample achievement four" }
   ],
+  "played": [
+    {
+      "GameID": 1,
+      "Title": "Super Metroid",
+      "ImageIcon": "/Images/000001.png",
+      "LastPlayed": "2026-11-01 22:49:00",
+      "NumPossibleAchievements": 100,
+      "NumAchieved": 42,
+      "NumAchievedHardcore": 37,
+      "ScoreAchieved": 420
+    },
+    {
+      "GameID": 4,
+      "Title": "Sample Older Progress Game",
+      "ImageIcon": "/Images/000004.png",
+      "LastPlayed": "2026-10-10 09:15:00",
+      "NumPossibleAchievements": 80,
+      "NumAchieved": 23,
+      "NumAchievedHardcore": 20,
+      "ScoreAchieved": 230
+    },
+    {
+      "GameID": 5,
+      "Title": "Sample No-Achievements Game",
+      "ImageIcon": "/Images/000005.png",
+      "LastPlayed": "2026-10-18 18:30:00",
+      "NumPossibleAchievements": 0,
+      "NumAchieved": 0,
+      "NumAchievedHardcore": 0
+    },
+    {
+      "GameID": 6,
+      "Title": "Sample Null-Fields Game",
+      "ImageIcon": null,
+      "LastPlayed": "2026-10-21 08:45:00",
+      "NumPossibleAchievements": null,
+      "NumAchieved": null,
+      "NumAchievedHardcore": null,
+      "ScoreAchieved": null
+    }
+  ],
   "awards": {
     "VisibleUserAwards": [
       { "AwardType": "Game Beaten", "AwardData": 1, "AwardedAt": "2026-11-01T22:50:00+00:00", "Title": "Super Metroid", "ImageIcon": "/Images/000001.png" },

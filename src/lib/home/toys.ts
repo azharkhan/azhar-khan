@@ -29,9 +29,9 @@ export function playersText(min: number, max: number): string {
 }
 
 export function playedText(plays: number): string {
-  if (plays === 0) return "You’ve played it 0 times.";
-  if (plays === 1) return "You’ve played it once.";
-  return `You’ve played it ${plays} times.`;
+  if (plays === 0) return "I haven’t played it yet.";
+  if (plays === 1) return "I’ve played it once.";
+  return `I’ve played it ${plays} times.`;
 }
 
 export function gameLine(game: Game): { name: string; rest: string } {

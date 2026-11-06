@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { z } from "astro/zod";
 import { longDate } from "../dates";
-import { buildGarden, growthOf } from "./build";
+import { buildGarden } from "./build";
 import { entrySchema, type FeedThing, type HandEntry, type Pursuit } from "./schema";
 import type { FeedResult } from "./feeds";
 
@@ -16,7 +16,6 @@ function pursuit(id: string, currently?: number): Pursuit {
     colour: "none",
     since: 2020,
     blurb: `[placeholder: ${id} blurb]`,
-    kit: [],
     currently,
   };
 }
@@ -87,10 +86,21 @@ describe("buildGarden", () => {
       sources: ["hand", "sample-films"],
       history: [{ verb: "watched" }],
       lastTouched: new Date("2026-10-20T12:00:00Z"),
-      growth: "budding",
       body: "[placeholder: longer thought]",
       dek: "[placeholder: dek]",
     });
+  });
+
+  it("detects a long feed thought as long-form", () => {
+    const thought = Array.from({ length: 400 }, () => "review").join(" ");
+    const garden = buildGarden({
+      pursuits: [pursuit("films")],
+      hand: [],
+      feeds: [feed([thing({ thought })])],
+      now,
+      samples: true,
+    });
+    expect(garden.entries[0]).toMatchObject({ long: true, thought });
   });
 
   it("preserves feed stats when a hand override has no stat", () => {
@@ -187,12 +197,6 @@ describe("buildGarden", () => {
       now,
       samples: true,
     })).toThrow("duplicate currently value: 1");
-  });
-
-  it("derives seedling, budding and evergreen growth", () => {
-    expect(growthOf({ long: false })).toBe("seedling");
-    expect(growthOf({ long: false, body: "[placeholder: thought]" })).toBe("budding");
-    expect(growthOf({ long: true })).toBe("evergreen");
   });
 
   it("keeps an entry in both pursuits", () => {

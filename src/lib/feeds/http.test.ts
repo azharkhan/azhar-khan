@@ -12,6 +12,16 @@ describe("HTTP helpers", () => {
     await expect(getText({ fetch, signal }, "https://x.test/p?token=secret")).resolves.toEqual({ status: 202, body: "queued" });
   });
 
+  it("sends a site User-Agent by default and preserves other headers", async () => {
+    const fetch = vi.fn(async (_url: string | URL | Request, init?: RequestInit) => {
+      const headers = new Headers(init?.headers);
+      expect(headers.get("User-Agent")).toBe("azharkhan.net/0.0.0 (https://azharkhan.net)");
+      expect(headers.get("X-Sample")).toBe("kept");
+      return new Response("ok");
+    }) as unknown as typeof globalThis.fetch;
+    await getText({ fetch, signal }, "https://x.test/p", { headers: { "X-Sample": "kept" } });
+  });
+
   it("throws a status error without the query string", async () => {
     const fetch = vi.fn(async () => new Response("denied", { status: 403 })) as unknown as typeof globalThis.fetch;
     await expect(getJson({ fetch, signal }, "https://x.test/p?y=secret")).rejects.toThrow("HTTP 403 https://x.test/p");

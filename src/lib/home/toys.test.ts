@@ -51,16 +51,16 @@ describe("die copy", () => {
     expect(playersText(1, 100)).toBe("1–lots of players");
   });
 
-  it("formats played counts", () => {
-    expect(playedText(0)).toBe("You’ve played it 0 times.");
-    expect(playedText(1)).toBe("You’ve played it once.");
-    expect(playedText(14)).toBe("You’ve played it 14 times.");
+  it("formats played counts from the site owner's perspective", () => {
+    expect(playedText(0)).toBe("I haven’t played it yet.");
+    expect(playedText(1)).toBe("I’ve played it once.");
+    expect(playedText(14)).toBe("I’ve played it 14 times.");
   });
 
   it("formats a game line", () => {
     expect(gameLine({ name: "Brass: Birmingham", minPlayers: 2, maxPlayers: 4, minutes: 120, plays: 0 })).toEqual({
       name: "Brass: Birmingham",
-      rest: ". 2–4 players, 120 min. You’ve played it 0 times.",
+      rest: ". 2–4 players, 120 min. I haven’t played it yet.",
     });
   });
 });

@@ -1,9 +1,8 @@
 ---
 title: Board games
-verb: Played
+verb: Gaming
 icon: dice-five
 colour: green
-since: "[placeholder: year]"
-blurb: "[placeholder: Board games blurb]"
+blurb: "Omnigamer. I'll play anything I can make time for or get invited to. The more interaction, the better."
 currently: 2
 ---

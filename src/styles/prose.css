@@ -27,6 +27,13 @@
 .post-head .meta { margin: 0; font-variant-numeric: lining-nums; }
 
 .prose h2 { font-family: var(--display); font-size: 1.45em; font-weight: 600; line-height: 1.2; margin: 2.2em 0 0.5em; font-variation-settings: "opsz" 48, "SOFT" 100, "WONK" 0; text-wrap: balance; }
+.uses-page .prose ul { list-style: none; padding: 0; margin: 0 0 1.1em; }
+.uses-page .prose li { position: relative; margin: 0 0 0.35em; color: var(--muted); }
+.uses-page .prose li::before { content: "–"; color: var(--coral); position: absolute; left: -1.1em; }
+.uses-page .prose li strong, .uses-page .prose li a { color: var(--ink); }
+.uses-page .prose li strong { font-weight: 600; }
+.uses-page .prose li a:hover { color: var(--coral); }
+@media (max-width: 44rem) { .uses-page .prose ul { padding-left: 1.1em; } }
 blockquote {
   margin: 1.75em 0; padding: 0.1em 0 0.1em 1.25rem;
   border-left: 2px solid var(--coral); font-style: italic;

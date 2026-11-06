@@ -11,7 +11,6 @@ function entry(id: string, pursuits: string[]): GardenEntry {
     pursuits,
     date: new Date("2026-01-01T00:00:00Z"),
     lastTouched: new Date("2026-01-01T00:00:00Z"),
-    growth: "seedling",
     long: false,
     history: [],
     tags: [],

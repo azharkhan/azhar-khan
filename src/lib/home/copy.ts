@@ -4,5 +4,3 @@ export const OPENERS = [
   "I help engineers ship great work, and occasionally ship some myself.",
   "I build teams that build software.",
 ] as const;
-
-export const BLOG_LINE = "I’ll write here eventually. For now, the blog is just this sentence.";

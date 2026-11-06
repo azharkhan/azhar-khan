@@ -3,7 +3,6 @@ title: Sample long-form entry
 kind: note
 pursuits: [board-games, 3d-printing]
 date: 2026-10-24
-long: true
 dek: "[placeholder: dek]"
 connected: [sample/sample-photo]
 sample: true

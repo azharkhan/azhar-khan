@@ -10,13 +10,13 @@ describe("feed registry", () => {
       .map((file) => file.slice(0, -3));
     expect(new Set(ids).size).toBe(ids.length);
     for (const adapter of adapters) expect(pursuits).toContain(adapter.pursuit);
-    expect(ids).toEqual(["letterboxd", "bgg", "crosspoint", "retroachievements", "lastfm"]);
+    expect(ids).toEqual(["letterboxd", "bgg", "hardcover", "retroachievements", "listenbrainz"]);
   });
 
   it("documents every feed and build environment variable with empty examples", () => {
     const envExample = readFileSync(new URL("../../../.env.example", import.meta.url), "utf8");
     const readme = readFileSync(new URL("../../../README.md", import.meta.url), "utf8");
-    const names = new Set([...adapters.flatMap((adapter) => adapter.env), "CROSSPOINT_URL", "FEEDS", "BUILD_NOW"]);
+    const names = new Set([...adapters.flatMap((adapter) => adapter.env), "FEEDS", "BUILD_NOW"]);
     for (const name of names) {
       expect(envExample.split(/\r?\n/).find((line) => line.startsWith(`${name}=`))).toBe(`${name}=`);
       expect(readme).toContain(name);

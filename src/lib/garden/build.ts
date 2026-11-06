@@ -1,15 +1,10 @@
 import { createHash } from "node:crypto";
 import type { FeedResult, FeedStatus } from "./feeds";
-import type { Growth, GardenEntry, HandEntry, HistoryEvent, Pursuit, ShelfGame, Stat } from "./schema";
+import { isLongForm } from "./wall";
+import type { GardenEntry, HandEntry, HistoryEvent, Pursuit, ShelfGame, Stat } from "./schema";
 
 export type BuildInput = { pursuits: Pursuit[]; hand: HandEntry[]; feeds: FeedResult[]; now: Date; samples: boolean };
 export type Garden = { now: Date; pursuits: Pursuit[]; entries: GardenEntry[]; feeds: FeedStatus[]; shelf: ShelfGame[] };
-
-export function growthOf(entry: { long: boolean; body?: string; thought?: string }): Growth {
-  if (entry.long) return "evergreen";
-  if (entry.body?.trim() || entry.thought?.trim()) return "budding";
-  return "seedling";
-}
 
 function compareHistory(a: HistoryEvent, b: HistoryEvent): number {
   return a.at.getTime() - b.at.getTime() || a.verb.localeCompare(b.verb);
@@ -62,8 +57,7 @@ function handEntry(entry: HandEntry): GardenEntry {
     pursuits: data.pursuits,
     date,
     lastTouched: updated ?? date,
-    growth: growthOf({ long: data.long, body }),
-    long: data.long,
+    long: isLongForm({ body }),
     dek: data.dek,
     body: body || undefined,
     url: data.kind === "link" ? data.url : undefined,
@@ -93,8 +87,7 @@ function feedEntry(feed: FeedResult, thing: FeedResult["things"][number]): Garde
     pursuits: [feed.pursuit],
     date,
     lastTouched,
-    growth: growthOf({ long: false, thought: thing.thought }),
-    long: false,
+    long: isLongForm({ thought: thing.thought }),
     thought: thing.thought,
     href: thing.href,
     cover: thing.cover,
@@ -183,6 +176,7 @@ export function buildGarden(input: BuildInput): Garden {
       date: dateMin(handMatch.date, entry.date),
       lastTouched: dateMax(handMatch.lastTouched, entry.lastTouched),
       thought: entry.thought,
+      long: isLongForm({ body: handMatch.body, thought: entry.thought }),
       metric: entry.metric,
       history: mergeHistory(handMatch.history, entry.history),
       sample: handMatch.sample || entry.sample,
@@ -205,7 +199,6 @@ export function buildGarden(input: BuildInput): Garden {
   }
 
   const entries = [...visibleHand, ...visibleFeeds]
-    .map((entry) => ({ ...entry, growth: growthOf(entry) }))
     .map((entry) => ({ ...entry, connected: entry.connected.filter((id) => ids.has(id)) }))
     .sort((a, b) => b.lastTouched.getTime() - a.lastTouched.getTime() || a.id.localeCompare(b.id));
   const feeds: FeedStatus[] = input.feeds.map(({ adapter, pursuit, mode, error, dropped }) => ({ adapter, pursuit, mode, error, dropped }));

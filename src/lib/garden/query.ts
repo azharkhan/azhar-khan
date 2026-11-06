@@ -1,10 +1,11 @@
 import type { Garden } from "./build";
+import { dayMonth, yearOf } from "../dates";
 import type { GardenEntry, Metric, Pursuit } from "./schema";
 
+export type CurrentlyItem = { title: string; id: string; href?: string };
 export type CurrentlyRow =
-  | { pursuit: Pursuit; state: "latest"; entry: GardenEntry; metric?: Metric }
-  | { pursuit: Pursuit; state: "blurb"; blurb: string; entry?: GardenEntry };
-export type CurrentlyOptions = { now?: Date; staleDays?: number };
+  | { pursuit: Pursuit; state: "latest"; entry: GardenEntry; metric?: Metric; detail?: string; items?: CurrentlyItem[] }
+  | { pursuit: Pursuit; state: "blurb"; blurb: string };
 
 export function entriesFor(garden: Garden, pursuitId: string): GardenEntry[] {
   return garden.entries
@@ -28,28 +29,58 @@ export function statMetric(garden: Garden, entry: GardenEntry, pursuitId: string
   return { kind: "stat", label, value: entry.stat.value, unit: entry.stat.unit, change };
 }
 
-export function currently(garden: Garden, opts: CurrentlyOptions = {}): CurrentlyRow[] {
-  const now = opts.now ?? garden.now;
-  const staleDays = opts.staleDays ?? 30;
+export function currently(garden: Garden): CurrentlyRow[] {
   const pursuits = garden.pursuits
     .filter((pursuit) => pursuit.currently !== undefined)
     .sort((a, b) => a.currently! - b.currently!);
 
   const rows: CurrentlyRow[] = [];
   for (const pursuit of pursuits) {
-    const entry = entriesFor(garden, pursuit.id)[0];
-    if (entry && now.getTime() - entry.lastTouched.getTime() <= staleDays * 86400000) {
-      rows.push({ pursuit, state: "latest", entry, metric: entry.metric ?? statMetric(garden, entry, pursuit.id) });
+    const entries = entriesFor(garden, pursuit.id);
+    let entry: GardenEntry | undefined = pursuit.id === "cubing"
+      ? entries.find((candidate) => candidate.kind === "stat" && candidate.stat?.label.trim().toLowerCase() === "single") ?? entries[0]
+      : entries[0];
+    let detail: string | undefined;
+    let items: CurrentlyItem[] | undefined;
+    if (pursuit.id === "board-games") {
+      const playsByGame = new Map<string, { entry: GardenEntry; at: Date }>();
+      let latestPlayedAt: Date | undefined;
+      for (const candidate of entries) {
+        for (const event of candidate.history) {
+          if (event.verb !== "played" || event.at.getTime() > garden.now.getTime()) continue;
+          const previous = playsByGame.get(candidate.id);
+          if (!previous || event.at.getTime() > previous.at.getTime()) playsByGame.set(candidate.id, { entry: candidate, at: event.at });
+          if (!latestPlayedAt || event.at.getTime() > latestPlayedAt.getTime()) latestPlayedAt = event.at;
+        }
+      }
+      entry = undefined;
+      if (latestPlayedAt) {
+        const latestDay = `${yearOf(latestPlayedAt)}-${dayMonth(latestPlayedAt)}`;
+        const games = [...playsByGame.values()]
+          .filter((game) => `${yearOf(game.at)}-${dayMonth(game.at)}` === latestDay)
+          .sort((a, b) => b.at.getTime() - a.at.getTime() || a.entry.title.localeCompare(b.entry.title) || a.entry.id.localeCompare(b.entry.id));
+        const shown = games.slice(0, 3);
+        entry = shown[0]?.entry;
+        items = shown.map(({ entry: game }) => ({
+          title: game.title,
+          id: game.id,
+          ...(game.href ? { href: game.href } : {}),
+        }));
+      }
+    }
+    if (entry) {
+      rows.push({ pursuit, state: "latest", entry, metric: entry.metric ?? statMetric(garden, entry, pursuit.id), detail, ...(items ? { items } : {}) });
       continue;
     }
 
     const unavailable = garden.feeds.some((feed) => {
       if (feed.pursuit !== pursuit.id) return false;
-      if (feed.mode === "off") return true;
+      if (feed.mode === "off") return feed.adapter !== "bgg" || garden.shelf.length === 0;
       if (!feed.error) return false;
+      if (feed.adapter === "bgg" && garden.shelf.length > 0) return false;
       return !garden.entries.some((candidate) => candidate.pursuits.includes(pursuit.id) && candidate.sources.includes(feed.adapter));
     });
-    if (!unavailable) rows.push({ pursuit, state: "blurb", blurb: pursuit.blurb, entry });
+    if (!unavailable) rows.push({ pursuit, state: "blurb", blurb: pursuit.blurb });
   }
   return rows;
 }

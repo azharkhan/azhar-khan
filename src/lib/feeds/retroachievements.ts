@@ -31,8 +31,15 @@ const awardSchema = z.object({
 });
 const awardsSchema = z.object({ VisibleUserAwards: z.array(z.unknown()) });
 
-type Raw = { sample: boolean; recent: unknown; awards: unknown };
-type Game = { id: string; title: string; icon?: string; unlocks: Map<string, { at: Date; count: number }>; history: HistoryEvent[] };
+type Raw = { sample: boolean; recent: unknown; awards: unknown; played: unknown };
+type Game = {
+  id: string;
+  title: string;
+  icon?: string;
+  progress?: { achieved: number; possible: number };
+  unlocks: Map<string, { at: Date; count: number }>;
+  history: HistoryEvent[];
+};
 
 function date(value: string): Date {
   return new Date(value.includes(" ") ? `${value.replace(" ", "T")}Z` : value);
@@ -53,6 +60,37 @@ function group(games: Map<string, Game>, id: string, title: string, icon?: strin
   const game = { id, title, icon, unlocks: new Map(), history: [] };
   games.set(id, game);
   return game;
+}
+
+function nonnegativeInteger(value: unknown): number | undefined {
+  if (typeof value === "number" && Number.isSafeInteger(value) && value >= 0) return value;
+  if (typeof value === "string" && /^\d+$/.test(value)) {
+    const parsed = Number(value);
+    if (Number.isSafeInteger(parsed)) return parsed;
+  }
+  return undefined;
+}
+
+function addRecentlyPlayed(games: Map<string, Game>, values: unknown): void {
+  if (!Array.isArray(values)) return;
+  for (const value of values) {
+    const item = value && typeof value === "object" && !Array.isArray(value) ? value as Record<string, unknown> : undefined;
+    if (!item) continue;
+    const id = idSchema.safeParse(item.GameID);
+    const title = typeof item.Title === "string" && item.Title.trim() ? item.Title : undefined;
+    if (!id.success || !title || typeof item.LastPlayed !== "string") continue;
+    const at = date(item.LastPlayed);
+    if (!Number.isFinite(at.getTime())) continue;
+
+    const icon = typeof item.ImageIcon === "string" && item.ImageIcon ? item.ImageIcon : undefined;
+    const game = group(games, id.data, title, icon);
+    game.history.push({ at, verb: "played" });
+
+    const possible = nonnegativeInteger(item.NumPossibleAchievements);
+    if (possible !== undefined) {
+      game.progress = { achieved: nonnegativeInteger(item.NumAchieved) ?? 0, possible };
+    }
+  }
 }
 
 function parse(raw: Raw): { things: FeedThing[] } {
@@ -78,6 +116,8 @@ function parse(raw: Raw): { things: FeedThing[] } {
       game.unlocks.set(day, { at, count: 1 });
     }
   }
+
+  addRecentlyPlayed(games, raw.played);
 
   for (const award of awards) {
     const verb = award.AwardType === "Game Beaten"
@@ -110,7 +150,11 @@ function parse(raw: Raw): { things: FeedThing[] } {
         href: `https://retroachievements.org/game/${game.id}`,
         cover: cover(game.icon),
         history,
-        metric: unlockCount > 0 ? { kind: "count", value: unlockCount, unit: "new" } : undefined,
+        metric: unlockCount > 0
+          ? { kind: "count", value: unlockCount, unit: "new" }
+          : game.progress && game.progress.possible > 0
+            ? { kind: "count", value: game.progress.achieved, unit: `/${game.progress.possible}` }
+            : undefined,
         sample: raw.sample,
       };
     }),
@@ -123,11 +167,13 @@ async function live(ctx: LiveContext): Promise<Raw> {
   const params = new URLSearchParams({ u: user, y: key });
   const recentUrl = `${baseUrl}/API_GetUserRecentAchievements.php?${new URLSearchParams({ ...Object.fromEntries(params), m: "43200" })}`;
   const awardsUrl = `${baseUrl}/API_GetUserAwards.php?${params}`;
-  const [recent, awards] = await Promise.all([
+  const playedUrl = `${baseUrl}/API_GetUserRecentlyPlayedGames.php?${new URLSearchParams({ ...Object.fromEntries(params), c: "50" })}`;
+  const [recent, awards, played] = await Promise.all([
     getJson({ fetch: ctx.fetch, signal: ctx.signal }, recentUrl),
     getJson({ fetch: ctx.fetch, signal: ctx.signal }, awardsUrl),
+    getJson({ fetch: ctx.fetch, signal: ctx.signal }, playedUrl),
   ]);
-  return { sample: false, recent, awards };
+  return { sample: false, recent, awards, played };
 }
 
 export const retroachievements: Adapter<Raw> = {

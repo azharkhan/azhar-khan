@@ -1,13 +1,21 @@
 import type { Adapter, LiveContext } from "../garden/feeds";
 import type { FeedThing, HistoryEvent, ShelfGame } from "../garden/schema";
+import { loadBggPlays, type BggPlay } from "./bgg-plays";
+import { loadBggShelf } from "./bgg-shelf";
 import { getText, httpError, sleep } from "./http";
 import { asArray, attr, parseXml, text } from "./xml";
 
 const baseUrl = "https://boardgamegeek.com/xmlapi2";
 
-type BggRaw = { sample: boolean; collection: string; plays: string[] };
+type BggRaw = {
+  sample: boolean;
+  collection: string;
+  plays: string[];
+  fallback?: { plays: BggPlay[]; shelf?: ShelfGame[] };
+};
 type Node = Record<string, unknown>;
-type Play = { id: string; date: string; quantity: number; comments: string[]; title?: string };
+type Play = { id: string; date: string; quantity: number; comments: string[]; title?: string; thumb?: string };
+type OwnedGame = { title: string; cover?: string; added?: Date };
 type Game = { id: string; title: string; cover?: string; history: HistoryEvent[]; playEvents: HistoryEvent[] };
 
 type BggOptions = { retryDelayMs?: number; maxAttempts?: number; maxPages?: number };
@@ -74,7 +82,92 @@ async function bggGet(
   throw new Error(`BGG ${path} still queued after ${maxAttempts} attempts`);
 }
 
-function parse(raw: BggRaw): { things: FeedThing[]; shelf: ShelfGame[] } {
+function thingsFromPlays(
+  playRows: Iterable<Play>,
+  owned: Map<string, OwnedGame>,
+  playedNames: Map<string, string>,
+  sample: boolean,
+): FeedThing[] {
+  const games = new Map<string, Game>();
+  for (const [id, game] of owned) {
+    games.set(id, {
+      id,
+      title: game.title,
+      cover: game.cover,
+      history: game.added ? [{ at: game.added, verb: "added" }] : [],
+      playEvents: [],
+    });
+  }
+  for (const play of playRows) {
+    const at = playDate(play.date)!;
+    const game = games.get(play.id) ?? {
+      id: play.id,
+      title: playedNames.get(play.id) ?? play.title ?? "",
+      history: [],
+      playEvents: [],
+    };
+    if (!game.title) continue;
+    const event: HistoryEvent = {
+      at,
+      verb: "played",
+      value: play.quantity,
+      text: play.comments.length ? play.comments.join("\n") : undefined,
+    };
+    game.history.push(event);
+    game.playEvents.push(event);
+    games.set(play.id, game);
+  }
+
+  return [...games.values()].map((game) => {
+    game.history.sort((a, b) => a.at.getTime() - b.at.getTime());
+    game.playEvents.sort((a, b) => a.at.getTime() - b.at.getTime());
+    const total = game.playEvents.reduce((sum, event) => sum + (event.value ?? 0), 0);
+    const newestComment = [...game.playEvents].reverse().find((event) => event.text)?.text;
+    return {
+      subject: `bgg:${game.id}`,
+      kind: "note",
+      title: game.title,
+      href: `https://boardgamegeek.com/boardgame/${game.id}`,
+      cover: game.cover,
+      history: game.history,
+      metric: total > 0 ? { kind: "times", value: total } : undefined,
+      thought: newestComment,
+      sample,
+    };
+  });
+}
+
+function parseFallback(raw: BggRaw & { fallback: NonNullable<BggRaw["fallback"]> }): { things: FeedThing[]; shelf: ShelfGame[] } {
+  const shelf = raw.fallback.shelf ?? [];
+  const shelfById = new Map(shelf.map((game) => [game.id, game]));
+  const playRows = new Map<string, Play>();
+  const playedNames = new Map<string, string>();
+  for (const play of raw.fallback.plays) {
+    const at = playDate(play.date);
+    if (!at) continue;
+    const key = `${play.id}\u0000${play.date}`;
+    const existing = playRows.get(key);
+    if (existing) {
+      existing.quantity++;
+      existing.thumb ??= play.thumb;
+    } else playRows.set(key, { id: play.id, date: play.date, quantity: 1, comments: [], title: play.name, thumb: play.thumb });
+    playedNames.set(play.id, play.name);
+  }
+
+  const owned = new Map<string, OwnedGame>();
+  for (const [id, play] of [...playRows.values()].map((play) => [play.id, play] as const)) {
+    const game = shelfById.get(id);
+    const previous = owned.get(id);
+    owned.set(id, {
+      title: play.title ?? game?.name ?? previous?.title ?? "",
+      cover: play.thumb ?? previous?.cover ?? game?.cover,
+    });
+  }
+  return { things: thingsFromPlays(playRows.values(), owned, playedNames, false), shelf };
+}
+
+function parse(raw: BggRaw): { things: FeedThing[]; shelf?: ShelfGame[] } {
+  if (raw.fallback) return parseFallback(raw as BggRaw & { fallback: NonNullable<BggRaw["fallback"]> });
   const collection = parsedRoot(raw.collection, "items");
   const collectionItems = asArray(collection.item).map(node).filter((item): item is Node => item !== undefined);
   const owned = new Map<string, { title: string; cover?: string; added?: Date }>();
@@ -136,55 +229,7 @@ function parse(raw: BggRaw): { things: FeedThing[]; shelf: ShelfGame[] } {
     }
   }
 
-  const games = new Map<string, Game>();
-  for (const [id, game] of owned) {
-    games.set(id, {
-      id,
-      title: game.title,
-      cover: game.cover,
-      history: game.added ? [{ at: game.added, verb: "added" }] : [],
-      playEvents: [],
-    });
-  }
-  for (const play of playRows.values()) {
-    const at = playDate(play.date)!;
-    const game = games.get(play.id) ?? {
-      id: play.id,
-      title: playedNames.get(play.id) ?? play.title ?? "",
-      history: [],
-      playEvents: [],
-    };
-    if (!game.title) continue;
-    const event: HistoryEvent = {
-      at,
-      verb: "played",
-      value: play.quantity,
-      text: play.comments.length ? play.comments.join("\n") : undefined,
-    };
-    game.history.push(event);
-    game.playEvents.push(event);
-    games.set(play.id, game);
-  }
-
-  const things: FeedThing[] = [];
-  for (const game of games.values()) {
-    game.history.sort((a, b) => a.at.getTime() - b.at.getTime());
-    game.playEvents.sort((a, b) => a.at.getTime() - b.at.getTime());
-    const total = game.playEvents.reduce((sum, event) => sum + (event.value ?? 0), 0);
-    const newestComment = [...game.playEvents].reverse().find((event) => event.text)?.text;
-    things.push({
-      subject: `bgg:${game.id}`,
-      kind: "note",
-      title: game.title,
-      href: `https://boardgamegeek.com/boardgame/${game.id}`,
-      cover: game.cover,
-      history: game.history,
-      metric: total > 0 ? { kind: "times", value: total } : undefined,
-      thought: newestComment,
-      sample: raw.sample,
-    });
-  }
-  return { things, shelf };
+  return { things: thingsFromPlays(playRows.values(), owned, playedNames, raw.sample), shelf };
 }
 
 export function createBggAdapter({ retryDelayMs = 2000, maxAttempts = 6, maxPages = 10 }: BggOptions = {}): Adapter<BggRaw> {
@@ -192,6 +237,7 @@ export function createBggAdapter({ retryDelayMs = 2000, maxAttempts = 6, maxPage
     id: "bgg",
     pursuit: "board-games",
     env: ["BGG_TOKEN"],
+    realFixture: true,
     async live(ctx) {
       const token = ctx.env.BGG_TOKEN ?? "";
       const collection = await bggGet(
@@ -218,6 +264,10 @@ export function createBggAdapter({ retryDelayMs = 2000, maxAttempts = 6, maxPage
         import("../../fixtures/bgg/plays.sample.xml?raw").then((module) => module.default),
       ]);
       return { sample: true, collection, plays: [plays] };
+    },
+    async realFallback() {
+      const [data, shelf] = await Promise.all([loadBggPlays(), loadBggShelf()]);
+      return { sample: false, collection: "", plays: [], fallback: { plays: data?.plays ?? [], shelf } };
     },
     parse(raw) {
       return parse(raw);
