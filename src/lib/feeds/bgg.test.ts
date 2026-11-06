@@ -5,8 +5,12 @@ import type { ShelfGame } from "../garden/schema";
 const now = new Date("2026-11-02T17:00:00Z");
 const bgg = createBggAdapter({ retryDelayMs: 0 });
 
-function parse(raw: Parameters<typeof bgg.parse>[0]) {
-  return bgg.parse(raw, { now });
+function parse(raw: Parameters<typeof bgg.parse>[0], at = now) {
+  return bgg.parse(raw, { now: at });
+}
+
+function ownedItem(id: string, name: string, lastmodified: string) {
+  return `<item objecttype="thing" objectid="${id}"><name>${name}</name><stats minplayers="1" maxplayers="4" playingtime="30"><rating value="N/A" /></stats><status own="1" lastmodified="${lastmodified}" /><numplays>0</numplays></item>`;
 }
 
 const emptyCollection = '<items totalitems="0" />';
@@ -51,6 +55,41 @@ describe("BoardGameGeek adapter", () => {
     const unplayed = things.find((thing) => thing.subject === "bgg:224517");
     expect(unplayed?.history.map((event) => event.verb)).toEqual(["added"]);
     expect(unplayed?.metric).toBeUndefined();
+  });
+
+  it("keeps only the past 12 months of activity and prefers comments over plays over additions", () => {
+    const at = new Date("2026-11-02T12:00:00Z");
+    const collection = `<items totalitems="4">
+      ${ownedItem("1", "Old addition", "2025-11-02 11:59:59")}
+      ${ownedItem("2", "Boundary addition", "2025-11-02 12:00:00")}
+      ${ownedItem("3", "Commented game", "2020-01-01 12:00:00")}
+      ${ownedItem("4", "Old play", "2020-01-01 12:00:00")}
+    </items>`;
+    const output = parse({
+      sample: false,
+      collection,
+      plays: [playsXml([
+        '<play date="2026-10-01" quantity="1"><item name="Commented game" objectid="3" /><comments>Recent comment</comments></play>',
+        '<play date="2026-11-01" quantity="2"><item name="Commented game" objectid="3" /></play>',
+        '<play date="2025-11-01" quantity="1"><item name="Old play" objectid="4" /></play>',
+        '<play date="2025-11-02" quantity="1"><item name="Boundary play" objectid="5" /></play>',
+        '<play date="2026-11-03" quantity="1"><item name="Future play" objectid="6" /></play>',
+      ])],
+    }, at);
+    const things = new Map(output.things.map((thing) => [thing.subject, thing]));
+
+    expect(output.shelf).toHaveLength(4);
+    expect([...things.keys()]).toEqual(["bgg:2", "bgg:3", "bgg:5"]);
+    expect(things.get("bgg:2")).toMatchObject({ history: [{ verb: "added", at: new Date("2025-11-02T12:00:00Z") }] });
+    expect(things.get("bgg:3")).toMatchObject({
+      thought: "Recent comment",
+      metric: { kind: "times", value: 3 },
+      history: [
+        { verb: "played", text: "Recent comment" },
+        { verb: "played" },
+      ],
+    });
+    expect(things.get("bgg:5")).toMatchObject({ history: [{ at: new Date("2025-11-02T12:00:00Z"), verb: "played" }] });
   });
 
   it("turns imported BG Stats plays into shared BGG history with counts and shelf covers", () => {

@@ -18,7 +18,7 @@ type BggRaw = {
 type Node = Record<string, unknown>;
 type Play = { id: string; date: string; quantity: number; comments: string[]; title?: string; thumb?: string };
 type OwnedGame = { title: string; cover?: string; added?: Date };
-type Game = { id: string; title: string; cover?: string; history: HistoryEvent[]; playEvents: HistoryEvent[] };
+type Game = { id: string; title: string; cover?: string; history: HistoryEvent[] };
 
 type BggOptions = { retryDelayMs?: number; maxAttempts?: number; maxPages?: number };
 
@@ -67,6 +67,12 @@ function playDate(value: string | undefined): Date | undefined {
   return Number.isNaN(date.getTime()) || date.toISOString().slice(0, 10) !== value ? undefined : date;
 }
 
+function yearAgo(now: Date): Date {
+  const cutoff = new Date(now);
+  cutoff.setUTCFullYear(cutoff.getUTCFullYear() - 1);
+  return cutoff;
+}
+
 async function bggGet(
   ctx: LiveContext,
   path: string,
@@ -89,8 +95,10 @@ function thingsFromPlays(
   owned: Map<string, OwnedGame>,
   playedNames: Map<string, string>,
   sample: boolean,
+  now: Date,
   covers: BggCovers = {},
 ): FeedThing[] {
+  const cutoff = yearAgo(now);
   const games = new Map<string, Game>();
   for (const [id, game] of owned) {
     games.set(id, {
@@ -98,7 +106,6 @@ function thingsFromPlays(
       title: game.title,
       cover: game.cover,
       history: game.added ? [{ at: game.added, verb: "added" }] : [],
-      playEvents: [],
     });
   }
   for (const play of playRows) {
@@ -107,7 +114,6 @@ function thingsFromPlays(
       id: play.id,
       title: playedNames.get(play.id) ?? play.title ?? "",
       history: [],
-      playEvents: [],
     };
     if (!game.title) continue;
     const event: HistoryEvent = {
@@ -117,30 +123,34 @@ function thingsFromPlays(
       text: play.comments.length ? play.comments.join("\n") : undefined,
     };
     game.history.push(event);
-    game.playEvents.push(event);
     games.set(play.id, game);
   }
 
-  return [...games.values()].map((game) => {
-    game.history.sort((a, b) => a.at.getTime() - b.at.getTime());
-    game.playEvents.sort((a, b) => a.at.getTime() - b.at.getTime());
-    const total = game.playEvents.reduce((sum, event) => sum + (event.value ?? 0), 0);
-    const newestComment = [...game.playEvents].reverse().find((event) => event.text)?.text;
-    return {
+  return [...games.values()].flatMap((game) => {
+    const history = game.history
+      .filter((event) => event.at >= cutoff && event.at <= now)
+      .sort((a, b) => a.at.getTime() - b.at.getTime());
+    const newestComment = [...history].reverse().find((event) => event.text?.trim())?.text;
+    const playEvents = history.filter((event) => event.verb === "played");
+    const hasRecentActivity = Boolean(newestComment || playEvents.length || history.some((event) => event.verb === "added"));
+    if (!hasRecentActivity) return [];
+
+    const total = playEvents.reduce((sum, event) => sum + (event.value ?? 0), 0);
+    return [{
       subject: `bgg:${game.id}`,
       kind: "note",
       title: game.title,
       href: `https://boardgamegeek.com/boardgame/${game.id}`,
       cover: covers[game.id] ?? game.cover,
-      history: game.history,
+      history,
       metric: total > 0 ? { kind: "times", value: total } : undefined,
       thought: newestComment,
       sample,
-    };
+    }];
   });
 }
 
-function parseFallback(raw: BggRaw & { fallback: NonNullable<BggRaw["fallback"]> }): { things: FeedThing[]; shelf: ShelfGame[] } {
+function parseFallback(raw: BggRaw & { fallback: NonNullable<BggRaw["fallback"]> }, now: Date): { things: FeedThing[]; shelf: ShelfGame[] } {
   const shelf = raw.fallback.shelf ?? [];
   const shelfById = new Map(shelf.map((game) => [game.id, game]));
   const playRows = new Map<string, Play>();
@@ -166,11 +176,11 @@ function parseFallback(raw: BggRaw & { fallback: NonNullable<BggRaw["fallback"]>
       cover: play.thumb ?? previous?.cover ?? game?.cover,
     });
   }
-  return { things: thingsFromPlays(playRows.values(), owned, playedNames, false, raw.covers), shelf };
+  return { things: thingsFromPlays(playRows.values(), owned, playedNames, false, now, raw.covers), shelf };
 }
 
-function parse(raw: BggRaw): { things: FeedThing[]; shelf?: ShelfGame[] } {
-  if (raw.fallback) return parseFallback(raw as BggRaw & { fallback: NonNullable<BggRaw["fallback"]> });
+function parse(raw: BggRaw, now: Date): { things: FeedThing[]; shelf?: ShelfGame[] } {
+  if (raw.fallback) return parseFallback(raw as BggRaw & { fallback: NonNullable<BggRaw["fallback"]> }, now);
   const collection = parsedRoot(raw.collection, "items");
   const collectionItems = asArray(collection.item).map(node).filter((item): item is Node => item !== undefined);
   const owned = new Map<string, { title: string; cover?: string; added?: Date }>();
@@ -232,7 +242,7 @@ function parse(raw: BggRaw): { things: FeedThing[]; shelf?: ShelfGame[] } {
     }
   }
 
-  return { things: thingsFromPlays(playRows.values(), owned, playedNames, raw.sample, raw.covers), shelf };
+  return { things: thingsFromPlays(playRows.values(), owned, playedNames, raw.sample, now, raw.covers), shelf };
 }
 
 export function createBggAdapter({ retryDelayMs = 2000, maxAttempts = 6, maxPages = 10 }: BggOptions = {}): Adapter<BggRaw> {
@@ -272,8 +282,8 @@ export function createBggAdapter({ retryDelayMs = 2000, maxAttempts = 6, maxPage
       const [data, shelf, covers] = await Promise.all([loadBggPlays(), loadBggShelf(), loadBggCovers()]);
       return { sample: false, collection: "", plays: [], fallback: { plays: data?.plays ?? [], shelf }, covers };
     },
-    parse(raw) {
-      return parse(raw);
+    parse(raw, { now }) {
+      return parse(raw, now);
     },
   };
 }
