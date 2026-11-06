@@ -114,6 +114,17 @@ describe("BoardGameGeek adapter", () => {
     expect(thing?.thought).toBe("Sample comment one\nSample comment two");
   });
 
+  it("prefers resolved medium covers, including for unowned played games", () => {
+    const cover = "https://cf.geekdo-images.com/x__medium/img/y=/fit-in/500x500/pic1.jpg";
+    const raw = {
+      sample: true,
+      collection: emptyCollection,
+      plays: [playsXml(['<play date="2026-10-01" quantity="1"><item name="Sample Test Game" objectid="999" /></play>'])],
+      covers: { "999": cover },
+    };
+    expect(parse(raw).things[0]?.cover).toBe(cover);
+  });
+
   it("retries queued collection responses and fetches only the needed play pages", async () => {
     let collectionCalls = 0;
     const pageOne = playsXml(Array.from({ length: 100 }, (_, index) =>

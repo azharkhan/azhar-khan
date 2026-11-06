@@ -1,5 +1,6 @@
 import type { Adapter, LiveContext } from "../garden/feeds";
 import type { FeedThing, HistoryEvent, ShelfGame } from "../garden/schema";
+import { loadBggCovers, type BggCovers } from "./bgg-covers";
 import { loadBggPlays, type BggPlay } from "./bgg-plays";
 import { loadBggShelf } from "./bgg-shelf";
 import { getText, httpError, sleep } from "./http";
@@ -12,6 +13,7 @@ type BggRaw = {
   collection: string;
   plays: string[];
   fallback?: { plays: BggPlay[]; shelf?: ShelfGame[] };
+  covers?: BggCovers;
 };
 type Node = Record<string, unknown>;
 type Play = { id: string; date: string; quantity: number; comments: string[]; title?: string; thumb?: string };
@@ -87,6 +89,7 @@ function thingsFromPlays(
   owned: Map<string, OwnedGame>,
   playedNames: Map<string, string>,
   sample: boolean,
+  covers: BggCovers = {},
 ): FeedThing[] {
   const games = new Map<string, Game>();
   for (const [id, game] of owned) {
@@ -128,7 +131,7 @@ function thingsFromPlays(
       kind: "note",
       title: game.title,
       href: `https://boardgamegeek.com/boardgame/${game.id}`,
-      cover: game.cover,
+      cover: covers[game.id] ?? game.cover,
       history: game.history,
       metric: total > 0 ? { kind: "times", value: total } : undefined,
       thought: newestComment,
@@ -163,7 +166,7 @@ function parseFallback(raw: BggRaw & { fallback: NonNullable<BggRaw["fallback"]>
       cover: play.thumb ?? previous?.cover ?? game?.cover,
     });
   }
-  return { things: thingsFromPlays(playRows.values(), owned, playedNames, false), shelf };
+  return { things: thingsFromPlays(playRows.values(), owned, playedNames, false, raw.covers), shelf };
 }
 
 function parse(raw: BggRaw): { things: FeedThing[]; shelf?: ShelfGame[] } {
@@ -229,7 +232,7 @@ function parse(raw: BggRaw): { things: FeedThing[]; shelf?: ShelfGame[] } {
     }
   }
 
-  return { things: thingsFromPlays(playRows.values(), owned, playedNames, raw.sample), shelf };
+  return { things: thingsFromPlays(playRows.values(), owned, playedNames, raw.sample, raw.covers), shelf };
 }
 
 export function createBggAdapter({ retryDelayMs = 2000, maxAttempts = 6, maxPages = 10 }: BggOptions = {}): Adapter<BggRaw> {
@@ -256,7 +259,7 @@ export function createBggAdapter({ retryDelayMs = 2000, maxAttempts = 6, maxPage
         const total = number(attr(root, "total"));
         if (pagePlays.length < 100 || (total !== undefined && page * 100 >= total)) break;
       }
-      return { sample: false, collection, plays };
+      return { sample: false, collection, plays, covers: await loadBggCovers() };
     },
     async fixture() {
       const [collection, plays] = await Promise.all([
@@ -266,8 +269,8 @@ export function createBggAdapter({ retryDelayMs = 2000, maxAttempts = 6, maxPage
       return { sample: true, collection, plays: [plays] };
     },
     async realFallback() {
-      const [data, shelf] = await Promise.all([loadBggPlays(), loadBggShelf()]);
-      return { sample: false, collection: "", plays: [], fallback: { plays: data?.plays ?? [], shelf } };
+      const [data, shelf, covers] = await Promise.all([loadBggPlays(), loadBggShelf(), loadBggCovers()]);
+      return { sample: false, collection: "", plays: [], fallback: { plays: data?.plays ?? [], shelf }, covers };
     },
     parse(raw) {
       return parse(raw);

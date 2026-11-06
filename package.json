@@ -17,7 +17,8 @@
     "bgstats:import": "node --experimental-strip-types scripts/bgstats-import.mjs",
     "checks:home": "node scripts/home-checks.mjs",
     "checks:garden": "node scripts/garden-checks.mjs",
-    "astro": "astro"
+    "astro": "astro",
+    "bgg:covers": "node --env-file=.env --experimental-strip-types scripts/bgg-covers.mjs"
   },
   "dependencies": {
     "@fontsource-variable/fraunces": "^5.3.0",
